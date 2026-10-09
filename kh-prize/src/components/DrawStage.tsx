@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { CandidateMatrix } from './CandidateMatrix';
 import { Gift, RotateCcw, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useDrawStore } from '../store/useDrawStore';
 import { useDrawSession } from '../context/DrawSessionContext';
@@ -209,32 +210,7 @@ export const DrawStage: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 overflow-y-auto flex-1 p-1 content-start">
-            <AnimatePresence>
-              {pool.map((p) => {
-                const isHighlighted = highlightId === p.id;
-                return (
-                  <motion.div
-                    key={p.id}
-                    layout
-                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    className={`relative p-3.5 min-h-[72px] rounded-xl border flex flex-col items-center justify-center text-center transition-all duration-100 ${
-                      isHighlighted
-                        ? 'bg-amber-400 border-amber-300 text-slate-950 scale-105 shadow-[0_0_25px_rgba(251,191,36,0.8)] z-10 font-bold'
-                        : 'bg-slate-800/80 border-slate-700/60 text-slate-300'
-                    }`}
-                  >
-                    <span className="text-base font-semibold leading-tight">{p.name}</span>
-                    <span
-                      className={`text-xs mt-1 ${isHighlighted ? 'text-slate-900' : 'text-slate-400'}`}
-                    >
-                      {p.department}
-                    </span>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
+          <CandidateMatrix pool={pool} highlightId={highlightId} isDrawing={isDrawing} />
         </section>
       </main>
     </div>

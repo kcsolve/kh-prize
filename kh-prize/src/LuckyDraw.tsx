@@ -1,46 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { Trophy, Gift, Sparkles, RotateCcw } from 'lucide-react';
-
-interface Participant {
-  id: string;
-  name: string;
-  department: string;
-}
-
-interface WinnerRecord {
-  prizeName: string;
-  winner: Participant;
-  timestamp: string;
-}
-
-// 模擬初始資料
-const INITIAL_PARTICIPANTS: Participant[] = [
-  { id: 'E001', name: '陳小明', department: '工程部' },
-  { id: 'E002', name: '李大華', department: '市場部' },
-  { id: 'E003', name: '張秀英', department: '人資部' },
-  { id: 'E004', name: '王家豪', department: '產品部' },
-  { id: 'E005', name: '林雅婷', department: '設計部' },
-  { id: 'E006', name: '黃志偉', department: '營運部' },
-  { id: 'E007', name: '何佩玲', department: '財務部' },
-  { id: 'E008', name: '吳冠宇', department: '工程部' },
-  { id: 'E009', name: '蔡美玲', department: '市場部' },
-  { id: 'E010', name: '鄭建華', department: '客服部' },
-  { id: 'E011', name: '謝淑娟', department: '行政部' },
-  { id: 'E012', name: '劉子豪', department: '工程部' },
-];
+import {
+  Trophy,
+  Gift,
+  Sparkles,
+  RotateCcw,
+  Upload,
+  Download,
+  Database,
+} from 'lucide-react';
+import { useDrawStore } from './store/useDrawStore';
+import type { Participant } from './store/useDrawStore';
+import { parseParticipantsExcel, exportDrawResultExcel } from './utils/excel';
 
 export const LuckyDraw: React.FC = () => {
-  const [pool, setPool] = useState<Participant[]>(INITIAL_PARTICIPANTS);
-  const [winners, setWinners] = useState<WinnerRecord[]>([]);
+  const {
+    pool,
+    winners,
+    currentPrize,
+    hasHydrated,
+    setPool,
+    setCurrentPrize,
+    recordWinner,
+    resetAll,
+  } = useDrawStore();
+
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
-  const [currentPrize] = useState<string>('特等獎: iPhone 16 Pro');
-
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 1. 安全隨機抽樣演算法 (Crypto Random)
+  // 1. 安全隨機抽樣演算法
   const selectRandomParticipant = (candidates: Participant[]): Participant => {
     const array = new Uint32Array(1);
     window.crypto.getRandomValues(array);
@@ -48,7 +39,7 @@ export const LuckyDraw: React.FC = () => {
     return candidates[randomIndex];
   };
 
-  // 2. 5秒閃爍動畫核心邏輯 (Ease-Out 頻率衰減)
+  // 2. 5 秒 Ease-Out 動畫
   const runDrawAnimation = () => {
     if (pool.length === 0 || isDrawing) return;
 
@@ -59,11 +50,8 @@ export const LuckyDraw: React.FC = () => {
     const loop = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / durationMs, 1);
-
-      // Ease-out 遞增間隔：從 50ms 逐漸衰減至 350ms
       const currentDelay = 50 + Math.pow(progress, 3) * 300;
 
-      // 隨機高亮其中一張卡片
       const randomCandidate = pool[Math.floor(Math.random() * pool.length)];
       setHighlightId(randomCandidate.id);
 
@@ -72,7 +60,6 @@ export const LuckyDraw: React.FC = () => {
           requestAnimationFrame(loop);
         }, currentDelay);
       } else {
-        // 動畫結束，正式由 Crypto API 確定最終得獎者
         finalizeWinner();
       }
     };
@@ -80,82 +67,142 @@ export const LuckyDraw: React.FC = () => {
     requestAnimationFrame(loop);
   };
 
-  // 3. 定格、剔除名單、結算中獎
+  // 3. 確定得獎者並持久化儲存
   const finalizeWinner = () => {
     const finalWinner = selectRandomParticipant(pool);
     setHighlightId(finalWinner.id);
 
-    // 觸發彩色碎紙特效
     confetti({
-      particleCount: 120,
-      spread: 70,
+      particleCount: 140,
+      spread: 80,
       origin: { y: 0.6 },
     });
 
-    // 延遲更新狀態，保留定格感
     setTimeout(() => {
-      setWinners((prev) => [
-        {
-          prizeName: currentPrize,
-          winner: finalWinner,
-          timestamp: new Date().toLocaleTimeString(),
-        },
-        ...prev,
-      ]);
-
-      // 從可抽候選池中剔除，防止重複得獎
-      setPool((prev) => prev.filter((p) => p.id !== finalWinner.id));
+      // 寫入 Zustand Store，自動同步更新至 IndexedDB
+      recordWinner(finalWinner, currentPrize);
       setIsDrawing(false);
       setHighlightId(null);
     }, 800);
   };
 
-  // 清除未完成的 timer
+  // Excel 檔案上傳處理
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const newPool = await parseParticipantsExcel(file);
+      setPool(newPool);
+      alert(`成功匯入 ${newPool.length} 位參加者名單！`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '請確認 Excel 格式';
+      alert(`匯入失敗：${message}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // 匯出報表
+  const handleExport = () => {
+    if (winners.length === 0 && pool.length === 0) {
+      alert('目前無任何名單或抽獎紀錄可匯出');
+      return;
+    }
+    exportDrawResultExcel(winners, pool);
+  };
+
   useEffect(() => {
     return () => {
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
     };
   }, []);
 
-  const handleReset = () => {
-    setPool(INITIAL_PARTICIPANTS);
-    setWinners([]);
-    setHighlightId(null);
-    setIsDrawing(false);
-  };
+  // 尚未完成 IndexedDB 還原時顯示載入狀態
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-300 flex items-center justify-center text-sm">
+        正在自 IndexedDB 還原抽獎狀態...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8 flex flex-col justify-between">
-      {/* 頂部標題列 */}
+      {/* 隱藏的 File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+      />
+
+      {/* 頂部導航列 */}
       <header className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <Trophy className="w-8 h-8 text-amber-400" />
-          <h1 className="text-2xl font-bold tracking-wider">ANNUAL GALA 2026 動態抽獎</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-wider">ANNUAL GALA 2026 動態抽獎</h1>
+            <p className="text-xs text-emerald-400 flex items-center gap-1 mt-0.5">
+              <Database className="w-3.5 h-3.5" /> IndexedDB 本地狀態即時同步中
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-slate-400">
-            目前獎項: <strong className="text-amber-300">{currentPrize}</strong>
-          </span>
-          <span className="bg-slate-800 px-3 py-1 rounded-full text-slate-300">
-            候選人數: {pool.length} 人
-          </span>
+
+        <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-slate-400">目前獎項:</span>
+            <input
+              type="text"
+              value={currentPrize}
+              onChange={(e) => setCurrentPrize(e.target.value)}
+              className="bg-slate-900 border border-slate-700 px-3 py-1 rounded text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
           <button
-            onClick={handleReset}
+            onClick={() => fileInputRef.current?.click()}
             disabled={isDrawing}
-            className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition text-xs disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md transition text-xs disabled:opacity-50"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> 重設
+            <Upload className="w-3.5 h-3.5" /> 匯入名單 (.xlsx)
+          </button>
+
+          <button
+            onClick={handleExport}
+            disabled={isDrawing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md transition text-xs disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5" /> 匯出結果
+          </button>
+
+          <button
+            onClick={() => {
+              if (confirm('確定要清空得獎紀錄並還原預設狀態？此操作不可逆。')) {
+                resetAll();
+              }
+            }}
+            disabled={isDrawing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 rounded-md transition text-xs disabled:opacity-50"
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> 重設所有狀態
           </button>
         </div>
       </header>
 
-      {/* 主體左右雙欄佈局 */}
+      {/* 主體左右雙欄 */}
       <main className="grid grid-cols-12 gap-8 flex-1">
-        {/* 左欄：獎品得獎者 Slot (4 欄) */}
+        {/* 左欄：得獎者清單 */}
         <section className="col-span-4 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 flex flex-col backdrop-blur-md">
-          <div className="flex items-center gap-2 mb-4 text-slate-400">
-            <Gift className="w-5 h-5 text-amber-400" />
-            <h2 className="font-semibold text-lg text-slate-200">得獎名冊</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Gift className="w-5 h-5 text-amber-400" />
+              <h2 className="font-semibold text-lg text-slate-200">得獎名冊</h2>
+            </div>
+            <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+              已抽出: {winners.length} 人
+            </span>
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
@@ -183,16 +230,23 @@ export const LuckyDraw: React.FC = () => {
             </AnimatePresence>
 
             {winners.length === 0 && (
-              <div className="h-40 border border-dashed border-slate-700 rounded-xl flex items-center justify-center text-slate-500 text-sm">
+              <div className="h-48 border border-dashed border-slate-800 rounded-xl flex items-center justify-center text-slate-500 text-sm">
                 尚未抽出得獎者
               </div>
             )}
           </div>
         </section>
 
-        {/* 右欄：參加者自適應網格矩陣 (8 欄) */}
+        {/* 右欄：參加者候選池 */}
         <section className="col-span-8 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-6 flex flex-col justify-between">
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 overflow-y-auto max-h-[560px] p-1">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm text-slate-400">候選人員矩陣</span>
+            <span className="text-xs bg-slate-800/80 px-2.5 py-1 rounded text-slate-300">
+              剩餘名額: {pool.length} 人
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 overflow-y-auto max-h-[540px] p-1">
             <AnimatePresence>
               {pool.map((p) => {
                 const isHighlighted = highlightId === p.id;

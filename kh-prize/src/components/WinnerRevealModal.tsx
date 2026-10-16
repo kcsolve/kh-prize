@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Check } from 'lucide-react';
 import type { Participant } from '../store/useDrawStore';
+import { usePresentationMode } from '../context/PresentationModeContext';
 
 interface WinnerRevealModalProps {
   winner: Participant;
@@ -14,6 +15,8 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
   prizeName,
   onConfirm,
 }) => {
+  const { isPresentationMode } = usePresentationMode();
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm"
@@ -48,12 +51,18 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
         <div className="px-6 pb-6">
           <button
             type="button"
+            data-presentation-draw
             onClick={onConfirm}
             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-base transition shadow-lg"
           >
             <Check className="w-5 h-5" />
             確認並加入得獎名冊
           </button>
+          {isPresentationMode && (
+            <p className="mt-3 text-center text-[11px] text-slate-500">
+              抽獎模式：按遙控 Enter／空白／翻頁鍵亦可確認
+            </p>
+          )}
         </div>
       </motion.div>
     </div>

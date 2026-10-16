@@ -11,6 +11,11 @@ import { Sparkles } from 'lucide-react';
 import { useDrawStore } from '../store/useDrawStore';
 import type { Participant } from '../store/useDrawStore';
 import { WinnerRevealModal } from '../components/WinnerRevealModal';
+import {
+  PrizeAdvanceModal,
+  type PrizeAdvanceNotice,
+} from '../components/PrizeAdvanceModal';
+import { getNextDrawablePrize, isPrizeFull } from '../utils/prizeNavigation';
 
 interface PendingReveal {
   winner: Participant;
@@ -27,12 +32,16 @@ interface DrawSessionContextValue {
   prizeSlotsLeft: number;
   highlightId: string | null;
   runDrawAnimation: () => void;
+  confirmPendingWinner: () => void;
+  isPrizeAdvanceOpen: boolean;
+  dismissPrizeAdvance: () => void;
 }
 
 const DrawSessionContext = createContext<DrawSessionContextValue | null>(null);
 
 export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { participants, prizes, currentPrizeId, awardWinner } = useDrawStore();
+  const { participants, prizes, currentPrizeId, awardWinner, setCurrentPrizeId } =
+    useDrawStore();
 
   const currentPrize = prizes.find((p) => p.id === currentPrizeId);
   const pool = participants.filter((p) => p.eligible);
@@ -43,6 +52,7 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [pendingReveal, setPendingReveal] = useState<PendingReveal | null>(null);
   const [isPreRevealPause, setIsPreRevealPause] = useState(false);
+  const [prizeAdvanceNotice, setPrizeAdvanceNotice] = useState<PrizeAdvanceNotice | null>(null);
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const poolRef = useRef(pool);
@@ -54,12 +64,41 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [currentPrize?.name]);
 
   const isAwaitingConfirm = pendingReveal != null;
+  const isPrizeAdvanceOpen = prizeAdvanceNotice != null;
   const canDraw =
     pool.length > 0 &&
     prizeSlotsLeft > 0 &&
     currentPrize != null &&
     !isAwaitingConfirm &&
-    !isPreRevealPause;
+    !isPreRevealPause &&
+    !isPrizeAdvanceOpen;
+
+  const openAdvanceFromFullPrize = useCallback(
+    (prizeId: string) => {
+      const snapshot = useDrawStore.getState();
+      const completed = snapshot.prizes.find((p) => p.id === prizeId);
+      if (!completed || !isPrizeFull(completed)) return;
+
+      const next = getNextDrawablePrize(snapshot.prizes, prizeId);
+      if (next) {
+        setCurrentPrizeId(next.id);
+        setPrizeAdvanceNotice({
+          completedPrizeName: completed.name,
+          nextPrizeName: next.name,
+        });
+      } else {
+        setPrizeAdvanceNotice({
+          completedPrizeName: completed.name,
+          nextPrizeName: null,
+        });
+      }
+    },
+    [setCurrentPrizeId]
+  );
+
+  const dismissPrizeAdvance = useCallback(() => {
+    setPrizeAdvanceNotice(null);
+  }, []);
 
   const selectRandomParticipant = (candidates: Participant[]): Participant => {
     const array = new Uint32Array(1);
@@ -98,10 +137,35 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const confirmPendingWinner = useCallback(() => {
     if (!pendingReveal) return;
-    awardWinner(currentPrizeId, pendingReveal.winner);
+    const prizeIdAtConfirm = currentPrizeId;
+    awardWinner(prizeIdAtConfirm, pendingReveal.winner);
     setPendingReveal(null);
     setHighlightId(null);
-  }, [pendingReveal, awardWinner, currentPrizeId]);
+
+    const updatedPrize = useDrawStore
+      .getState()
+      .prizes.find((p) => p.id === prizeIdAtConfirm);
+    if (updatedPrize && isPrizeFull(updatedPrize)) {
+      openAdvanceFromFullPrize(prizeIdAtConfirm);
+    }
+  }, [pendingReveal, awardWinner, currentPrizeId, openAdvanceFromFullPrize]);
+
+  useEffect(() => {
+    if (isDrawing || isAwaitingConfirm || isPreRevealPause || isPrizeAdvanceOpen) return;
+    if (!currentPrize || !isPrizeFull(currentPrize)) return;
+    const next = getNextDrawablePrize(prizes, currentPrizeId);
+    if (!next) return;
+    openAdvanceFromFullPrize(currentPrizeId);
+  }, [
+    currentPrizeId,
+    currentPrize,
+    isDrawing,
+    isAwaitingConfirm,
+    isPreRevealPause,
+    isPrizeAdvanceOpen,
+    openAdvanceFromFullPrize,
+    prizes,
+  ]);
 
   const runDrawAnimation = useCallback(() => {
     if (!canDraw || isDrawing || isAwaitingConfirm || isPreRevealPause) return;
@@ -151,6 +215,9 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     prizeSlotsLeft,
     highlightId,
     runDrawAnimation,
+    confirmPendingWinner,
+    isPrizeAdvanceOpen,
+    dismissPrizeAdvance,
   };
 
   return (
@@ -162,6 +229,9 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
           prizeName={pendingReveal.prizeName}
           onConfirm={confirmPendingWinner}
         />
+      )}
+      {prizeAdvanceNotice && (
+        <PrizeAdvanceModal notice={prizeAdvanceNotice} onDismiss={dismissPrizeAdvance} />
       )}
     </DrawSessionContext.Provider>
   );
@@ -190,6 +260,7 @@ export const DrawStartButton: React.FC = () => {
   return (
     <button
       type="button"
+      data-presentation-draw
       onClick={runDrawAnimation}
       disabled={disabled}
       className={`relative px-8 md:px-12 py-3 md:py-3.5 rounded-full font-bold text-base md:text-lg tracking-wider transition-all duration-300 whitespace-nowrap ${

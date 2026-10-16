@@ -22,16 +22,20 @@ export interface Prize {
   note?: string;
 }
 
+export const DEFAULT_EVENT_TITLE = 'ANNUAL GALA 2026 動態抽獎';
+
 interface DrawState {
   participants: Participant[];
   prizes: Prize[];
   currentPrizeId: string;
   activeTab: 'stage' | 'prizes' | 'participants';
+  eventTitle: string;
   isMuted: boolean;
   hasHydrated: boolean;
 
   // Actions
   setActiveTab: (tab: 'stage' | 'prizes' | 'participants') => void;
+  setEventTitle: (title: string) => void;
   toggleMute: () => void;
   setParticipants: (list: Participant[]) => void;
   toggleParticipantEligibility: (id: string) => void;
@@ -84,10 +88,13 @@ export const useDrawStore = create<DrawState>()(
       prizes: DEFAULT_PRIZES,
       currentPrizeId: 'prize-1',
       activeTab: 'stage',
+      eventTitle: DEFAULT_EVENT_TITLE,
       isMuted: false,
       hasHydrated: false,
 
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setEventTitle: (title) =>
+        set({ eventTitle: title.trim() || DEFAULT_EVENT_TITLE }),
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
       setParticipants: (list) => set({ participants: list }),
@@ -189,17 +196,26 @@ export const useDrawStore = create<DrawState>()(
     }),
     {
       name: 'kh-prize-storage',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
         participants: state.participants,
         prizes: state.prizes,
         currentPrizeId: state.currentPrizeId,
         activeTab: state.activeTab,
+        eventTitle: state.eventTitle,
         isMuted: state.isMuted,
       }),
       migrate: (persistedState, version) => {
-        if (version >= 1) return persistedState as DrawState;
+        const state = persistedState as DrawState & { eventTitle?: string };
+        if (version >= 2) return state;
+
+        if (version >= 1) {
+          return {
+            ...state,
+            eventTitle: state.eventTitle?.trim() || DEFAULT_EVENT_TITLE,
+          };
+        }
 
         const legacy = persistedState as {
           pool?: { id: string; name: string; department: string }[];
@@ -233,6 +249,7 @@ export const useDrawStore = create<DrawState>()(
           prizes: DEFAULT_PRIZES,
           currentPrizeId: 'prize-1',
           activeTab: 'stage' as const,
+          eventTitle: DEFAULT_EVENT_TITLE,
           isMuted: false,
         };
       },

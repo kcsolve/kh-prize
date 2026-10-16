@@ -49,12 +49,12 @@ export const DrawStage: React.FC = () => {
     <div className="flex flex-col flex-1 min-h-0">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
         <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 min-w-0">
-          <span className="text-slate-400 text-sm shrink-0">目前獎項:</span>
+          <span className="text-slate-300 text-lg md:text-xl font-medium shrink-0">目前獎項:</span>
           <select
             value={currentPrizeId}
             onChange={(e) => setCurrentPrizeId(e.target.value)}
             disabled={isDrawing || prizes.length === 0}
-            className="w-full flex-1 min-w-0 bg-slate-900 border border-slate-700 px-4 py-2.5 rounded-lg text-base text-amber-300 font-semibold focus:outline-none focus:border-amber-400 disabled:opacity-50 truncate"
+            className="w-full flex-1 min-w-0 bg-slate-900 border border-slate-700 px-4 py-3 md:py-3.5 rounded-lg text-lg md:text-xl text-amber-300 font-semibold focus:outline-none focus:border-amber-400 disabled:opacity-50 truncate"
           >
             {[...prizes]
               .sort((a, b) => a.order - b.order)

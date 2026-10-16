@@ -15,7 +15,7 @@ export const DrawStage: React.FC = () => {
     resetAll,
   } = useDrawStore();
 
-  const { isDrawing, highlightId, prizeSlotsLeft } = useDrawSession();
+  const { isDrawing, isPreRevealPause, highlightId, prizeSlotsLeft } = useDrawSession();
 
   const pool = participants.filter((p) => p.eligible);
 
@@ -210,7 +210,11 @@ export const DrawStage: React.FC = () => {
             </span>
           </div>
 
-          <CandidateMatrix pool={pool} highlightId={highlightId} isDrawing={isDrawing} />
+          <CandidateMatrix
+            pool={pool}
+            highlightId={highlightId}
+            isDrawing={isDrawing || isPreRevealPause}
+          />
         </section>
       </main>
     </div>

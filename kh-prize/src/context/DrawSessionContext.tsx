@@ -17,8 +17,11 @@ interface PendingReveal {
   prizeName: string;
 }
 
+const PRE_REVEAL_PAUSE_MS = 3000;
+
 interface DrawSessionContextValue {
   isDrawing: boolean;
+  isPreRevealPause: boolean;
   isAwaitingConfirm: boolean;
   canDraw: boolean;
   prizeSlotsLeft: number;
@@ -39,7 +42,9 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isDrawing, setIsDrawing] = useState(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [pendingReveal, setPendingReveal] = useState<PendingReveal | null>(null);
+  const [isPreRevealPause, setIsPreRevealPause] = useState(false);
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const preRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const poolRef = useRef(pool);
   poolRef.current = pool;
   const prizeNameRef = useRef(currentPrize?.name ?? '');
@@ -50,7 +55,11 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const isAwaitingConfirm = pendingReveal != null;
   const canDraw =
-    pool.length > 0 && prizeSlotsLeft > 0 && currentPrize != null && !isAwaitingConfirm;
+    pool.length > 0 &&
+    prizeSlotsLeft > 0 &&
+    currentPrize != null &&
+    !isAwaitingConfirm &&
+    !isPreRevealPause;
 
   const selectRandomParticipant = (candidates: Participant[]): Participant => {
     const array = new Uint32Array(1);
@@ -68,17 +77,23 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const finalWinner = selectRandomParticipant(candidates);
     setHighlightId(finalWinner.id);
     setIsDrawing(false);
+    setIsPreRevealPause(true);
 
-    confetti({
-      particleCount: 160,
-      spread: 90,
-      origin: { y: 0.55 },
-    });
+    if (preRevealTimeoutRef.current) clearTimeout(preRevealTimeoutRef.current);
+    preRevealTimeoutRef.current = setTimeout(() => {
+      confetti({
+        particleCount: 160,
+        spread: 90,
+        origin: { y: 0.55 },
+      });
 
-    setPendingReveal({
-      winner: finalWinner,
-      prizeName: prizeNameRef.current,
-    });
+      setPendingReveal({
+        winner: finalWinner,
+        prizeName: prizeNameRef.current,
+      });
+      setIsPreRevealPause(false);
+      preRevealTimeoutRef.current = null;
+    }, PRE_REVEAL_PAUSE_MS);
   }, []);
 
   const confirmPendingWinner = useCallback(() => {
@@ -89,10 +104,12 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [pendingReveal, awardWinner, currentPrizeId]);
 
   const runDrawAnimation = useCallback(() => {
-    if (!canDraw || isDrawing || isAwaitingConfirm) return;
+    if (!canDraw || isDrawing || isAwaitingConfirm || isPreRevealPause) return;
 
     setIsDrawing(true);
     setPendingReveal(null);
+    setIsPreRevealPause(false);
+    if (preRevealTimeoutRef.current) clearTimeout(preRevealTimeoutRef.current);
     const durationMs = 5000;
     const startTime = performance.now();
 
@@ -117,16 +134,18 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
 
     requestAnimationFrame(loop);
-  }, [canDraw, isDrawing, isAwaitingConfirm, finalizeWinner]);
+  }, [canDraw, isDrawing, isAwaitingConfirm, isPreRevealPause, finalizeWinner]);
 
   useEffect(() => {
     return () => {
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+      if (preRevealTimeoutRef.current) clearTimeout(preRevealTimeoutRef.current);
     };
   }, []);
 
   const value: DrawSessionContextValue = {
     isDrawing,
+    isPreRevealPause,
     isAwaitingConfirm,
     canDraw,
     prizeSlotsLeft,
@@ -157,10 +176,16 @@ export const useDrawSession = (): DrawSessionContextValue => {
 };
 
 export const DrawStartButton: React.FC = () => {
-  const { isDrawing, isAwaitingConfirm, canDraw, prizeSlotsLeft, runDrawAnimation } =
-    useDrawSession();
+  const {
+    isDrawing,
+    isPreRevealPause,
+    isAwaitingConfirm,
+    canDraw,
+    prizeSlotsLeft,
+    runDrawAnimation,
+  } = useDrawSession();
 
-  const disabled = isDrawing || isAwaitingConfirm || !canDraw;
+  const disabled = isDrawing || isPreRevealPause || isAwaitingConfirm || !canDraw;
 
   return (
     <button
@@ -168,7 +193,7 @@ export const DrawStartButton: React.FC = () => {
       onClick={runDrawAnimation}
       disabled={disabled}
       className={`relative px-8 md:px-12 py-3 md:py-3.5 rounded-full font-bold text-base md:text-lg tracking-wider transition-all duration-300 whitespace-nowrap ${
-        isDrawing
+        isDrawing || isPreRevealPause
           ? 'bg-amber-500 text-slate-950 cursor-not-allowed animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.6)]'
           : isAwaitingConfirm
             ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
@@ -178,10 +203,12 @@ export const DrawStartButton: React.FC = () => {
       }`}
     >
       <span className="flex items-center gap-2">
-        <Sparkles className={`w-5 h-5 ${isDrawing ? 'animate-spin' : ''}`} />
+        <Sparkles className={`w-5 h-5 ${isDrawing || isPreRevealPause ? 'animate-spin' : ''}`} />
         {isDrawing
           ? '抽取中 (5s)...'
-          : isAwaitingConfirm
+          : isPreRevealPause
+            ? '定格揭曉 (3s)...'
+            : isAwaitingConfirm
             ? '請確認得獎者'
             : !canDraw
               ? prizeSlotsLeft <= 0

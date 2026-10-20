@@ -4,7 +4,11 @@ import { useDrawStore } from './store/useDrawStore';
 import { DrawStage } from './components/DrawStage';
 import { PrizeManager } from './components/PrizeManager';
 import { ParticipantManager } from './components/ParticipantManager';
-import { DrawSessionProvider, DrawStartButton } from './context/DrawSessionContext';
+import {
+  DrawSessionProvider,
+  DrawStartButton,
+  ContinuousDrawToggle,
+} from './context/DrawSessionContext';
 import {
   PresentationModeProvider,
   PresentationRemoteListener,
@@ -43,6 +47,15 @@ const EventTitleField: React.FC<{ readOnly: boolean }> = ({ readOnly }) => {
   );
 };
 
+const DrawThemeRoot: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const drawTheme = useDrawStore((s) => s.drawTheme);
+  return (
+    <div data-draw-theme={drawTheme} className="contents">
+      {children}
+    </div>
+  );
+};
+
 const LuckyDrawShell: React.FC = () => {
   const { activeTab, setActiveTab, isMuted, toggleMute } = useDrawStore();
   const { isPresentationMode } = usePresentationMode();
@@ -62,9 +75,12 @@ const LuckyDrawShell: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-center py-1 relative z-20">
+        <div className="flex flex-wrap items-center justify-center gap-3 py-1 relative z-20">
           {activeTab === 'stage' || uiLocked ? (
-            <DrawStartButton />
+            <>
+              <ContinuousDrawToggle />
+              <DrawStartButton />
+            </>
           ) : (
             <div className="h-[52px]" aria-hidden />
           )}
@@ -128,11 +144,14 @@ const LuckyDrawShell: React.FC = () => {
 };
 
 export const LuckyDraw: React.FC = () => {
-  const { hasHydrated } = useDrawStore();
+  const { hasHydrated, drawTheme } = useDrawStore();
 
   if (!hasHydrated) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-300 flex items-center justify-center text-sm">
+      <div
+        data-draw-theme={drawTheme}
+        className="min-h-screen bg-slate-950 text-slate-300 flex items-center justify-center text-sm"
+      >
         正在自 IndexedDB 還原抽獎狀態...
       </div>
     );
@@ -140,10 +159,12 @@ export const LuckyDraw: React.FC = () => {
 
   return (
     <PresentationModeProvider>
-      <DrawSessionProvider>
-        <LuckyDrawShell />
-        <PresentationRemoteListener />
-      </DrawSessionProvider>
+      <DrawThemeRoot>
+        <DrawSessionProvider>
+          <LuckyDrawShell />
+          <PresentationRemoteListener />
+        </DrawSessionProvider>
+      </DrawThemeRoot>
     </PresentationModeProvider>
   );
 };

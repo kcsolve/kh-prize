@@ -9,6 +9,7 @@ import {
   PRIZE_EXCEL_COLUMNS,
 } from '../utils/excel';
 import { ExcelFormatHint } from './ExcelFormatHint';
+import { DrawThemeSelector } from './DrawThemeSelector';
 
 export const PrizeManager: React.FC = () => {
   const { prizes, addPrize, updatePrize, deletePrize, setPrizes } = useDrawStore();
@@ -43,7 +44,8 @@ export const PrizeManager: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl h-full flex flex-col">
+    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl h-full flex flex-col min-h-0 overflow-y-auto">
+      <DrawThemeSelector />
       <input
         type="file"
         ref={fileInputRef}

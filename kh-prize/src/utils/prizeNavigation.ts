@@ -4,6 +4,16 @@ export function isPrizeFull(prize: Prize): boolean {
   return prize.winners.length >= prize.quota;
 }
 
+/** 目前獎項尚可再抽的名額（已得獎者不計入） */
+export function getRemainingPrizeSlots(
+  prizes: Prize[],
+  prizeId: string
+): number {
+  const prize = prizes.find((p) => p.id === prizeId);
+  if (!prize) return 0;
+  return Math.max(0, prize.quota - prize.winners.length);
+}
+
 /** 依 order 找下一個仍有名額的獎項（不含 currentId 本身） */
 export function getNextDrawablePrize(prizes: Prize[], currentId: string): Prize | null {
   const sorted = [...prizes].sort((a, b) => a.order - b.order);

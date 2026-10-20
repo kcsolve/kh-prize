@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CandidateMatrix } from './CandidateMatrix';
+import { BlindBoxStage } from './BlindBoxStage';
 import { Gift, RotateCcw, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useDrawStore } from '../store/useDrawStore';
 import { useDrawSession } from '../context/DrawSessionContext';
@@ -13,9 +14,20 @@ export const DrawStage: React.FC = () => {
     currentPrizeId,
     setCurrentPrizeId,
     resetAll,
+    stageDisplayMode,
   } = useDrawStore();
 
-  const { isDrawing, isPreRevealPause, highlightId, prizeSlotsLeft } = useDrawSession();
+  const {
+    isDrawing,
+    isPreRevealPause,
+    isAwaitingConfirm,
+    isBatchRunning,
+    highlightId,
+    prizeSlotsLeft,
+  } = useDrawSession();
+
+  const drawSessionLocked =
+    isDrawing || isPreRevealPause || isAwaitingConfirm || isBatchRunning;
 
   const pool = participants.filter((p) => p.eligible);
 
@@ -53,7 +65,7 @@ export const DrawStage: React.FC = () => {
           <select
             value={currentPrizeId}
             onChange={(e) => setCurrentPrizeId(e.target.value)}
-            disabled={isDrawing || prizes.length === 0}
+            disabled={drawSessionLocked || prizes.length === 0}
             className="w-full flex-1 min-w-0 bg-slate-900 border border-slate-700 px-4 py-3 md:py-3.5 rounded-lg text-lg md:text-xl text-amber-300 font-semibold focus:outline-none focus:border-amber-400 disabled:opacity-50 truncate"
           >
             {[...prizes]
@@ -69,7 +81,7 @@ export const DrawStage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 shrink-0">
         <button
           onClick={handleExport}
-          disabled={isDrawing}
+          disabled={drawSessionLocked}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs disabled:opacity-50"
         >
           <Download className="w-3.5 h-3.5" /> 匯出結果
@@ -81,7 +93,7 @@ export const DrawStage: React.FC = () => {
               resetAll();
             }
           }}
-          disabled={isDrawing}
+          disabled={drawSessionLocked}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 rounded-md text-xs disabled:opacity-50"
         >
           <RotateCcw className="w-3.5 h-3.5" /> 重設所有狀態
@@ -204,17 +216,29 @@ export const DrawStage: React.FC = () => {
 
         <section className="col-span-12 lg:col-span-9 bg-slate-900/40 border border-slate-800/60 rounded-2xl p-5 lg:p-6 flex flex-col h-[min(560px,calc(100vh-240px))] min-h-[360px] shrink-0">
           <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
-            <span className="text-base font-medium text-slate-200">候選人員矩陣</span>
+            <span className="text-base font-medium text-slate-200">
+              {stageDisplayMode === 'blindbox' ? '盲盒抽獎' : '候選人員矩陣'}
+            </span>
             <span className="text-sm bg-slate-800/80 px-3 py-1 rounded-md text-slate-300">
               候選: {pool.length} 人 · 本獎剩餘名額: {Math.max(prizeSlotsLeft, 0)}
             </span>
           </div>
 
-          <CandidateMatrix
-            pool={pool}
-            highlightId={highlightId}
-            isDrawing={isDrawing || isPreRevealPause}
-          />
+          {stageDisplayMode === 'blindbox' ? (
+            <BlindBoxStage
+              pool={pool}
+              highlightId={highlightId}
+              isDrawing={isDrawing}
+              isPreRevealPause={isPreRevealPause}
+              isPopupOpen={isAwaitingConfirm}
+            />
+          ) : (
+            <CandidateMatrix
+              pool={pool}
+              highlightId={highlightId}
+              isDrawing={isDrawing || isPreRevealPause}
+            />
+          )}
         </section>
       </main>
     </div>

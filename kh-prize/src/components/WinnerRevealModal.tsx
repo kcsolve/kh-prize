@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Check } from 'lucide-react';
 import type { Participant } from '../store/useDrawStore';
 import { usePresentationMode } from '../context/PresentationModeContext';
+import { useDrawStore } from '../store/useDrawStore';
 
 interface WinnerRevealModalProps {
   winner: Participant;
@@ -16,18 +17,26 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
   onConfirm,
 }) => {
   const { isPresentationMode } = usePresentationMode();
+  const isBlindbox = useDrawStore((s) => s.stageDisplayMode) === 'blindbox';
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="winner-reveal-title"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: isBlindbox ? 0.25 : 0.35 }}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.85 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+        initial={{ opacity: 0, scale: isBlindbox ? 0.92 : 0.85, y: isBlindbox ? 20 : 0 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={
+          isBlindbox
+            ? { duration: 0.32, ease: [0.22, 1, 0.36, 1] }
+            : { type: 'spring', stiffness: 320, damping: 26 }
+        }
         className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(245,158,11,0.35)] overflow-hidden"
       >
         <div className="bg-amber-500/15 border-b border-amber-500/30 px-6 py-4 text-center">
@@ -65,6 +74,6 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
           )}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };

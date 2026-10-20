@@ -8,8 +8,10 @@ import {
   FileSpreadsheet,
   Plus,
   RotateCcw,
+  LayoutGrid,
+  Gift,
 } from 'lucide-react';
-import { useDrawStore } from '../store/useDrawStore';
+import { useDrawStore, type StageDisplayMode } from '../store/useDrawStore';
 import {
   parseParticipantsExcel,
   exportParticipantsExcel,
@@ -17,7 +19,6 @@ import {
   PARTICIPANT_EXCEL_COLUMNS,
 } from '../utils/excel';
 import { ExcelFormatHint } from './ExcelFormatHint';
-
 export const ParticipantManager: React.FC = () => {
   const {
     participants,
@@ -26,7 +27,29 @@ export const ParticipantManager: React.FC = () => {
     addParticipant,
     forfeitPrize,
     clearParticipants,
+    stageDisplayMode,
+    setStageDisplayMode,
   } = useDrawStore();
+
+  const stageModeOptions: {
+    id: StageDisplayMode;
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      id: 'matrix',
+      title: '候選人員矩陣',
+      description: '全員網格／列表顯示，5 秒滾動抽選 + 3 秒定格揭曉，適合公開透明抽獎。',
+      icon: <LayoutGrid className="w-5 h-5" />,
+    },
+    {
+      id: 'blindbox',
+      title: '單一盲盒動畫',
+      description: '僅播放一次開盒／抽選動畫，一次抽出本獎項全部剩餘名額並集中公佈。',
+      icon: <Gift className="w-5 h-5" />,
+    },
+  ];
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newId, setNewId] = useState('');
@@ -78,7 +101,7 @@ export const ParticipantManager: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl h-full flex flex-col min-h-[480px]">
+    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl h-full flex flex-col min-h-[480px] overflow-y-auto">
       <input
         type="file"
         ref={fileInputRef}
@@ -137,6 +160,47 @@ export const ParticipantManager: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <section className="mb-6 p-4 rounded-xl border border-slate-800 bg-slate-950/60">
+        <h3 className="text-sm font-semibold text-slate-200 mb-1">抽獎舞台顯示方式</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          設定會套用在「抽獎舞台」候選區域，並影響抽獎動畫長度（儲存於本機）。
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {stageModeOptions.map((opt) => {
+            const active = stageDisplayMode === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setStageDisplayMode(opt.id)}
+                className={`text-left p-4 rounded-xl border transition ${
+                  active
+                    ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30'
+                    : 'border-slate-800 bg-slate-900/80 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className={`p-1.5 rounded-md ${
+                      active ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {opt.icon}
+                  </span>
+                  <span className="font-semibold text-sm text-slate-100">{opt.title}</span>
+                  {active && (
+                    <span className="text-[10px] ml-auto px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                      使用中
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">{opt.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {showAddForm && (
         <form

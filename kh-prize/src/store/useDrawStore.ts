@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
+import { normalizeDrawTheme, type DrawThemeId } from '../themes/drawThemes';
 
 export interface Participant {
   id: string;
@@ -24,18 +25,27 @@ export interface Prize {
 
 export const DEFAULT_EVENT_TITLE = 'ANNUAL GALA 2026 動態抽獎';
 
+export type StageDisplayMode = 'matrix' | 'blindbox';
+export type { DrawThemeId };
+
 interface DrawState {
   participants: Participant[];
   prizes: Prize[];
   currentPrizeId: string;
   activeTab: 'stage' | 'prizes' | 'participants';
   eventTitle: string;
+  stageDisplayMode: StageDisplayMode;
+  continuousDrawEnabled: boolean;
+  drawTheme: DrawThemeId;
   isMuted: boolean;
   hasHydrated: boolean;
 
   // Actions
   setActiveTab: (tab: 'stage' | 'prizes' | 'participants') => void;
   setEventTitle: (title: string) => void;
+  setStageDisplayMode: (mode: StageDisplayMode) => void;
+  setContinuousDrawEnabled: (enabled: boolean) => void;
+  setDrawTheme: (theme: DrawThemeId) => void;
   toggleMute: () => void;
   setParticipants: (list: Participant[]) => void;
   toggleParticipantEligibility: (id: string) => void;
@@ -89,20 +99,28 @@ export const useDrawStore = create<DrawState>()(
       currentPrizeId: 'prize-1',
       activeTab: 'stage',
       eventTitle: DEFAULT_EVENT_TITLE,
+      stageDisplayMode: 'matrix',
+      continuousDrawEnabled: false,
+      drawTheme: 'default',
       isMuted: false,
       hasHydrated: false,
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setEventTitle: (title) =>
         set({ eventTitle: title.trim() || DEFAULT_EVENT_TITLE }),
+      setStageDisplayMode: (mode) => set({ stageDisplayMode: mode }),
+      setContinuousDrawEnabled: (enabled) => set({ continuousDrawEnabled: enabled }),
+      setDrawTheme: (theme) => set({ drawTheme: normalizeDrawTheme(theme) }),
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
       setParticipants: (list) => set({ participants: list }),
       toggleParticipantEligibility: (id) =>
         set((state) => ({
-          participants: state.participants.map((p) =>
-            p.id === id ? { ...p, eligible: !p.eligible } : p
-          ),
+          participants: state.participants.map((p) => {
+            if (p.id !== id) return p;
+            if (p.wonPrizeId) return p;
+            return { ...p, eligible: !p.eligible };
+          }),
         })),
       addParticipant: (input) =>
         set((state) => {
@@ -154,7 +172,14 @@ export const useDrawStore = create<DrawState>()(
       addPrize: (prize) => set((state) => ({ prizes: [...state.prizes, prize] })),
       updatePrize: (id, updated) =>
         set((state) => ({
-          prizes: state.prizes.map((pz) => (pz.id === id ? { ...pz, ...updated } : pz)),
+          prizes: state.prizes.map((pz) => {
+            if (pz.id !== id) return pz;
+            const merged = { ...pz, ...updated };
+            if (typeof merged.quota === 'number') {
+              merged.quota = Math.max(merged.quota, pz.winners.length, 1);
+            }
+            return merged;
+          }),
         })),
       deletePrize: (id) =>
         set((state) => {
@@ -170,7 +195,14 @@ export const useDrawStore = create<DrawState>()(
       awardWinner: (prizeId, winner) =>
         set((state) => {
           const targetPrize = state.prizes.find((p) => p.id === prizeId);
-          const prizeName = targetPrize?.name || '神秘獎品';
+          if (!targetPrize) return state;
+          if (targetPrize.winners.length >= targetPrize.quota) return state;
+          if (targetPrize.winners.some((w) => w.id === winner.id)) return state;
+
+          const person = state.participants.find((p) => p.id === winner.id);
+          if (!person?.eligible || person.wonPrizeId) return state;
+
+          const prizeName = targetPrize.name || '神秘獎品';
 
           return {
             prizes: state.prizes.map((p) =>
@@ -196,7 +228,7 @@ export const useDrawStore = create<DrawState>()(
     }),
     {
       name: 'kh-prize-storage',
-      version: 2,
+      version: 5,
       storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
         participants: state.participants,
@@ -204,16 +236,51 @@ export const useDrawStore = create<DrawState>()(
         currentPrizeId: state.currentPrizeId,
         activeTab: state.activeTab,
         eventTitle: state.eventTitle,
+        stageDisplayMode: state.stageDisplayMode,
+        continuousDrawEnabled: state.continuousDrawEnabled,
+        drawTheme: state.drawTheme,
         isMuted: state.isMuted,
       }),
       migrate: (persistedState, version) => {
-        const state = persistedState as DrawState & { eventTitle?: string };
-        if (version >= 2) return state;
+        const state = persistedState as DrawState & {
+          eventTitle?: string;
+          stageDisplayMode?: StageDisplayMode;
+          continuousDrawEnabled?: boolean;
+          drawTheme?: DrawThemeId;
+        };
+        if (version >= 5) return state;
+
+        if (version >= 4) {
+          return {
+            ...state,
+            drawTheme: normalizeDrawTheme(state.drawTheme),
+          };
+        }
+
+        if (version >= 3) {
+          return {
+            ...state,
+            continuousDrawEnabled: Boolean(state.continuousDrawEnabled),
+            drawTheme: 'default' as const,
+          };
+        }
+
+        if (version >= 2) {
+          return {
+            ...state,
+            stageDisplayMode: state.stageDisplayMode === 'blindbox' ? 'blindbox' : 'matrix',
+            continuousDrawEnabled: false,
+            drawTheme: 'default' as const,
+          };
+        }
 
         if (version >= 1) {
           return {
             ...state,
             eventTitle: state.eventTitle?.trim() || DEFAULT_EVENT_TITLE,
+            stageDisplayMode: 'matrix' as const,
+            continuousDrawEnabled: false,
+            drawTheme: 'default' as const,
           };
         }
 
@@ -250,6 +317,9 @@ export const useDrawStore = create<DrawState>()(
           currentPrizeId: 'prize-1',
           activeTab: 'stage' as const,
           eventTitle: DEFAULT_EVENT_TITLE,
+          stageDisplayMode: 'matrix' as const,
+          continuousDrawEnabled: false,
+          drawTheme: 'default' as const,
           isMuted: false,
         };
       },

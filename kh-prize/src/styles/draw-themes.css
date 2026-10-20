@@ -1,0 +1,299 @@
+/* 全站：LuckyDraw 外層 DrawThemeRoot 設 data-draw-theme="christmas" */
+
+[data-draw-theme='christmas'] {
+  --christmas-bg-deep: 22 6 11;
+  --christmas-bg-panel: 52 14 24;
+  --christmas-bg-elevated: 68 20 32;
+  --christmas-bg-input: 14 4 8;
+  --christmas-border: 130 52 68;
+  --christmas-accent: 185 28 28;
+  --christmas-accent-hover: 220 38 38;
+  --christmas-accent-soft: 220 80 80;
+  --christmas-gold: 255 215 90;
+  --christmas-gold-bright: 255 236 170;
+  --christmas-gold-deep: 180 130 45;
+  --christmas-gold-muted: 214 163 76;
+  --christmas-gold-border: 232 185 80;
+  --christmas-gold-glow: 250 204 21;
+  --christmas-text: 255 251 245;
+  --christmas-text-body: 254 235 210;
+  --christmas-text-muted: 253 200 150;
+  --christmas-text-subtle: 251 180 120;
+  --christmas-on-gold: 42 8 12;
+}
+
+/* --- 背景（含根節點自身 class） --- */
+
+[data-draw-theme='christmas'].bg-slate-900,
+[data-draw-theme='christmas'] .bg-slate-900 {
+  background-color: rgb(var(--christmas-bg-panel)) !important;
+}
+
+[data-draw-theme='christmas'].bg-slate-950,
+[data-draw-theme='christmas'] .bg-slate-950,
+[data-draw-theme='christmas'] .bg-slate-950\/60,
+[data-draw-theme='christmas'] .bg-slate-950\/85 {
+  background-color: rgb(var(--christmas-bg-input)) !important;
+}
+
+[data-draw-theme='christmas'] .bg-slate-950\/85 {
+  background-color: rgb(var(--christmas-bg-deep) / 0.88) !important;
+}
+
+[data-draw-theme='christmas'] .bg-slate-900\/60,
+[data-draw-theme='christmas'] .bg-slate-900\/40 {
+  background-color: rgb(var(--christmas-bg-panel) / 0.72) !important;
+}
+
+[data-draw-theme='christmas'] .bg-slate-900\/80 {
+  background-color: rgb(var(--christmas-bg-elevated) / 0.92) !important;
+}
+
+[data-draw-theme='christmas'].bg-slate-800,
+[data-draw-theme='christmas'] .bg-slate-800,
+[data-draw-theme='christmas'] .bg-slate-800\/40,
+[data-draw-theme='christmas'] .bg-slate-800\/80 {
+  background-color: rgb(var(--christmas-bg-elevated)) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:bg-slate-700:hover {
+  background-color: rgb(88 26 38) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:bg-slate-800\/40:hover,
+[data-draw-theme='christmas'] .hover\:bg-slate-800\/30:hover,
+[data-draw-theme='christmas'] .hover\:bg-slate-800\/50:hover {
+  background-color: rgb(var(--christmas-bg-elevated) / 0.55) !important;
+}
+
+[data-draw-theme='christmas'] .from-slate-900 {
+  --tw-gradient-from: rgb(var(--christmas-bg-panel)) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(var(--christmas-bg-panel) / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+[data-draw-theme='christmas'] .to-slate-950 {
+  --tw-gradient-to: rgb(var(--christmas-bg-deep)) var(--tw-gradient-to-position) !important;
+}
+
+[data-draw-theme='christmas'] .bg-amber-950,
+[data-draw-theme='christmas'] .bg-amber-950\/50 {
+  background-color: rgb(55 18 22) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:bg-amber-900\/40:hover {
+  background-color: rgb(80 28 32 / 0.65) !important;
+}
+
+/* --- 邊框 / 分隔（酒紅底 + 鎏金描邊） --- */
+
+[data-draw-theme='christmas'].border-slate-800,
+[data-draw-theme='christmas'] .border-slate-800,
+[data-draw-theme='christmas'] .border-slate-800\/60,
+[data-draw-theme='christmas'] .border-slate-800\/80 {
+  border-color: rgb(var(--christmas-gold-border) / 0.28) !important;
+}
+
+[data-draw-theme='christmas'] .border-slate-700 {
+  border-color: rgb(var(--christmas-gold-border) / 0.38) !important;
+}
+
+[data-draw-theme='christmas'] .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--christmas-gold-border) / 0.22) !important;
+}
+
+[data-draw-theme='christmas'] .border-emerald-500\/45 {
+  border-color: rgb(var(--christmas-gold-muted) / 0.55) !important;
+}
+
+/* --- 文字對比 --- */
+
+[data-draw-theme='christmas'] .text-slate-100,
+[data-draw-theme='christmas'] .text-slate-200 {
+  color: rgb(var(--christmas-text)) !important;
+}
+
+[data-draw-theme='christmas'] .text-slate-300 {
+  color: rgb(var(--christmas-text-body)) !important;
+}
+
+[data-draw-theme='christmas'] .text-slate-400 {
+  color: rgb(var(--christmas-text-muted)) !important;
+}
+
+[data-draw-theme='christmas'] .text-slate-500 {
+  color: rgb(var(--christmas-text-subtle)) !important;
+}
+
+[data-draw-theme='christmas'] .text-slate-950 {
+  color: rgb(var(--christmas-on-gold)) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:text-amber-300:hover {
+  color: rgb(var(--christmas-gold-bright)) !important;
+}
+
+[data-draw-theme='christmas'] .text-amber-400,
+[data-draw-theme='christmas'] .text-amber-300,
+[data-draw-theme='christmas'] .text-amber-300\/90,
+[data-draw-theme='christmas'] .text-amber-400\/90 {
+  color: rgb(var(--christmas-gold)) !important;
+}
+
+[data-draw-theme='christmas'] .text-amber-500,
+[data-draw-theme='christmas'] .text-amber-200,
+[data-draw-theme='christmas'] .text-amber-100,
+[data-draw-theme='christmas'] .text-amber-200\/80,
+[data-draw-theme='christmas'] .text-amber-100\/90,
+[data-draw-theme='christmas'] .text-amber-200\/90 {
+  color: rgb(var(--christmas-gold-bright)) !important;
+}
+
+/* --- 鎏金主按鈕 / 選中分頁 --- */
+
+[data-draw-theme='christmas'] .bg-amber-500,
+[data-draw-theme='christmas'] .bg-amber-400,
+[data-draw-theme='christmas'] .bg-amber-400\/95,
+[data-draw-theme='christmas'] .bg-amber-400\/90 {
+  background-image: linear-gradient(
+    135deg,
+    rgb(255 236 170),
+    rgb(var(--christmas-gold-glow)),
+    rgb(var(--christmas-gold-deep))
+  ) !important;
+  background-color: rgb(var(--christmas-gold-glow)) !important;
+  color: rgb(var(--christmas-on-gold)) !important;
+  border-color: rgb(var(--christmas-gold-bright) / 0.65) !important;
+}
+
+[data-draw-theme='christmas'] .bg-amber-500\/10 {
+  background-color: rgb(var(--christmas-gold-glow) / 0.12) !important;
+}
+
+[data-draw-theme='christmas'] .bg-amber-500\/15 {
+  background-color: rgb(var(--christmas-gold-glow) / 0.16) !important;
+}
+
+[data-draw-theme='christmas'] .bg-amber-500\/20 {
+  background-color: rgb(var(--christmas-gold-glow) / 0.22) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:bg-amber-400:hover,
+[data-draw-theme='christmas'] .hover\:bg-amber-500:hover {
+  background-image: linear-gradient(
+    135deg,
+    rgb(255 245 200),
+    rgb(252 211 77),
+    rgb(202 138 4)
+  ) !important;
+  filter: brightness(1.05);
+}
+
+[data-draw-theme='christmas'] .bg-gradient-to-r.from-amber-500.to-amber-600,
+[data-draw-theme='christmas'] .bg-gradient-to-r.from-amber-500 {
+  background-image: linear-gradient(
+    to right,
+    rgb(255 228 140),
+    rgb(var(--christmas-gold-glow)),
+    rgb(var(--christmas-gold-deep))
+  ) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:from-amber-400:hover {
+  --tw-gradient-from: rgb(255 245 190) var(--tw-gradient-from-position) !important;
+}
+
+[data-draw-theme='christmas'] .hover\:to-amber-500:hover {
+  --tw-gradient-to: rgb(234 179 8) var(--tw-gradient-to-position) !important;
+}
+
+[data-draw-theme='christmas'] .from-amber-500,
+[data-draw-theme='christmas'] .from-amber-500\/10 {
+  --tw-gradient-from: rgb(var(--christmas-gold-glow)) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(var(--christmas-gold-glow) / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+[data-draw-theme='christmas'] .from-amber-500\/10 {
+  --tw-gradient-from: rgb(var(--christmas-gold-glow) / 0.2) var(--tw-gradient-from-position) !important;
+}
+
+[data-draw-theme='christmas'] .to-amber-600 {
+  --tw-gradient-to: rgb(var(--christmas-gold-deep)) var(--tw-gradient-to-position) !important;
+}
+
+[data-draw-theme='christmas'] .to-amber-900\/5 {
+  --tw-gradient-to: rgb(var(--christmas-bg-panel) / 0.4) var(--tw-gradient-to-position) !important;
+}
+
+[data-draw-theme='christmas'] .from-amber-600\/90 {
+  --tw-gradient-from: rgb(var(--christmas-gold-deep) / 0.95) var(--tw-gradient-from-position) !important;
+}
+
+[data-draw-theme='christmas'] .via-amber-800\/80 {
+  --tw-gradient-via: rgb(var(--christmas-accent) / 0.75) var(--tw-gradient-via-position) !important;
+}
+
+[data-draw-theme='christmas'] .bg-gradient-to-br.from-amber-600\/90 {
+  background-image: linear-gradient(
+    to bottom right,
+    rgb(var(--christmas-gold-deep) / 0.95),
+    rgb(var(--christmas-accent) / 0.85),
+    rgb(var(--christmas-bg-panel))
+  ) !important;
+}
+
+/* --- 金色邊框 / 光暈 --- */
+
+[data-draw-theme='christmas'] .border-amber-500,
+[data-draw-theme='christmas'] .border-amber-500\/20,
+[data-draw-theme='christmas'] .border-amber-500\/30,
+[data-draw-theme='christmas'] .border-amber-500\/40,
+[data-draw-theme='christmas'] .border-amber-500\/50,
+[data-draw-theme='christmas'] .border-amber-500\/60,
+[data-draw-theme='christmas'] .border-amber-400,
+[data-draw-theme='christmas'] .border-amber-300,
+[data-draw-theme='christmas'] .border-amber-300\/80,
+[data-draw-theme='christmas'] .border-amber-800\/40 {
+  border-color: rgb(var(--christmas-gold-muted) / 0.72) !important;
+}
+
+[data-draw-theme='christmas'] .border-2.border-amber-500\/50 {
+  border-color: rgb(var(--christmas-gold) / 0.65) !important;
+  box-shadow:
+    0 0 24px rgb(var(--christmas-gold-glow) / 0.25),
+    inset 0 1px 0 rgb(var(--christmas-gold-bright) / 0.35) !important;
+}
+
+[data-draw-theme='christmas'] .ring-amber-500\/30,
+[data-draw-theme='christmas'] .ring-amber-500\/40,
+[data-draw-theme='christmas'] .focus\:ring-amber-500\/40:focus,
+[data-draw-theme='christmas'] .focus\:border-amber-500\/50:focus,
+[data-draw-theme='christmas'] .focus\:border-amber-400:focus {
+  --tw-ring-color: rgb(var(--christmas-gold-glow) / 0.45) !important;
+  border-color: rgb(var(--christmas-gold-muted) / 0.75) !important;
+}
+
+[data-draw-theme='christmas'] .shadow-\[0_0_20px_rgba\(245\,158\,11\,0\.3\)\],
+[data-draw-theme='christmas'] .shadow-\[0_0_35px_rgba\(245\,158\,11\,0\.6\)\],
+[data-draw-theme='christmas'] .shadow-\[0_0_30px_rgba\(245\,158\,11\,0\.6\)\],
+[data-draw-theme='christmas'] .shadow-\[0_0_50px_rgba\(245\,158\,11\,0\.35\)\],
+[data-draw-theme='christmas'] .shadow-\[0_0_60px_rgba\(245\,158\,11\,0\.35\)\] {
+  --tw-shadow-color: rgb(var(--christmas-gold-glow) / 0.45) !important;
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    0 0 40px rgb(var(--christmas-gold-glow) / 0.35) !important;
+}
+
+[data-draw-theme='christmas'] .shadow-\[0_0_20px_rgba\(251\,191\,36\,0\.75\)\] {
+  box-shadow: 0 0 28px rgb(var(--christmas-gold-bright) / 0.75) !important;
+}
+
+[data-draw-theme='christmas'] .shadow-\[0_0_60px_rgba\(16\,185\,129\,0\.25\)\] {
+  box-shadow: 0 0 48px rgb(var(--christmas-gold-glow) / 0.28) !important;
+}
+
+/* 頂部標題列：細金線 */
+[data-draw-theme='christmas'] header.border-b {
+  border-bottom-color: rgb(var(--christmas-gold-border) / 0.45) !important;
+  box-shadow: 0 1px 0 rgb(var(--christmas-gold-bright) / 0.08);
+}

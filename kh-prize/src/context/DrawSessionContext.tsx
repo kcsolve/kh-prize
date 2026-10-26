@@ -25,7 +25,12 @@ import {
   isPrizeFull,
 } from '../utils/prizeNavigation';
 import { getDrawTiming } from '../utils/drawTiming';
-import { usePresentationMode } from './PresentationModeContext';
+import {
+  PresentationExitConfirmModal,
+  usePresentationMode,
+} from './PresentationModeContext';
+
+export const PRESENTATION_HOST_ATTR = 'data-presentation-host';
 
 interface PendingReveal {
   winner: Participant;
@@ -72,6 +77,13 @@ function pickMultipleWinners(candidates: Participant[], count: number): Particip
 }
 
 export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const {
+    isPresentationMode,
+    exitConfirmOpen,
+    cancelExitPresentation,
+    exitPresentationMode,
+  } = usePresentationMode();
+  const presentationHostRef = useRef<HTMLDivElement>(null);
   const { participants, prizes, currentPrizeId, awardWinner, setCurrentPrizeId, stageDisplayMode } =
     useDrawStore();
   const timing = getDrawTiming(stageDisplayMode);
@@ -381,6 +393,24 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
   }, []);
 
+  useEffect(() => {
+    if (!isPresentationMode) return;
+    const el = presentationHostRef.current;
+    if (!el) return;
+
+    const timer = window.setTimeout(() => {
+      if (document.fullscreenElement) return;
+      void el.requestFullscreen?.().catch(() => {});
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (document.fullscreenElement === el) {
+        void document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [isPresentationMode]);
+
   const value: DrawSessionContextValue = {
     isDrawing,
     isPreRevealPause,
@@ -396,9 +426,8 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     dismissPrizeAdvance,
   };
 
-  return (
-    <DrawSessionContext.Provider value={value}>
-      {children}
+  const modals = (
+    <>
       {pendingBatchSummary && (
         <BatchWinnerAnnounceModal
           payload={pendingBatchSummary}
@@ -415,6 +444,28 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       {prizeAdvanceNotice && (
         <PrizeAdvanceModal notice={prizeAdvanceNotice} onDismiss={dismissPrizeAdvance} />
       )}
+      <PresentationExitConfirmModal
+        open={exitConfirmOpen}
+        onCancel={cancelExitPresentation}
+        onConfirm={exitPresentationMode}
+      />
+    </>
+  );
+
+  return (
+    <DrawSessionContext.Provider value={value}>
+      <div
+        ref={presentationHostRef}
+        {...{ [PRESENTATION_HOST_ATTR]: '' }}
+        className={
+          isPresentationMode
+            ? 'fixed inset-0 z-[50] flex flex-col min-h-0 bg-slate-950 text-slate-100'
+            : 'contents'
+        }
+      >
+        {children}
+        {modals}
+      </div>
     </DrawSessionContext.Provider>
   );
 };
@@ -431,10 +482,8 @@ export const ContinuousDrawToggle: React.FC = () => {
   const continuousDrawEnabled = useDrawStore((s) => s.continuousDrawEnabled);
   const setContinuousDrawEnabled = useDrawStore((s) => s.setContinuousDrawEnabled);
   const { isDrawing, isPreRevealPause, isAwaitingConfirm, isBatchRunning } = useDrawSession();
-  const { isPresentationMode } = usePresentationMode();
 
-  const disabled =
-    isPresentationMode || isDrawing || isPreRevealPause || isAwaitingConfirm || isBatchRunning;
+  const disabled = isDrawing || isPreRevealPause || isAwaitingConfirm || isBatchRunning;
 
   return (
     <label
@@ -468,7 +517,7 @@ export const ContinuousDrawToggle: React.FC = () => {
   );
 };
 
-export const DrawStartButton: React.FC = () => {
+export const DrawStartButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const {
     isDrawing,
     isPreRevealPause,
@@ -494,7 +543,7 @@ export const DrawStartButton: React.FC = () => {
       data-presentation-draw
       onClick={runDrawAnimation}
       disabled={disabled}
-      className={`relative px-8 md:px-12 py-3 md:py-3.5 rounded-full font-bold text-base md:text-lg tracking-wider transition-all duration-300 whitespace-nowrap ${
+      className={`relative px-8 md:px-12 py-3 md:py-3.5 rounded-full font-bold text-base md:text-lg tracking-wider transition-all duration-300 whitespace-nowrap ${className} ${
         isDrawing || isPreRevealPause
           ? 'bg-amber-500 text-slate-950 cursor-not-allowed animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.6)]'
           : isAwaitingConfirm

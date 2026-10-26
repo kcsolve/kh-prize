@@ -9,6 +9,7 @@ interface BlindBoxStageProps {
   isDrawing: boolean;
   isPreRevealPause: boolean;
   isPopupOpen: boolean;
+  immersive?: boolean;
 }
 
 export const BlindBoxStage: React.FC<BlindBoxStageProps> = ({
@@ -17,6 +18,7 @@ export const BlindBoxStage: React.FC<BlindBoxStageProps> = ({
   isDrawing,
   isPreRevealPause,
   isPopupOpen,
+  immersive = false,
 }) => {
   const focused = highlightId ? pool.find((p) => p.id === highlightId) : null;
   const isRevealed = isPreRevealPause && focused != null;
@@ -24,7 +26,11 @@ export const BlindBoxStage: React.FC<BlindBoxStageProps> = ({
   return (
     <div className="flex flex-1 min-h-0 items-center justify-center py-6 px-4">
       <motion.div
-        className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80"
+        className={`relative ${
+          immersive
+            ? 'w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[28rem] lg:h-[28rem]'
+            : 'w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80'
+        }`}
         animate={
           isPopupOpen
             ? { opacity: 0, scale: 0.88, y: 16 }

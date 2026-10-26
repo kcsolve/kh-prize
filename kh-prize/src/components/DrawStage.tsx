@@ -5,6 +5,11 @@ import { BlindBoxStage } from './BlindBoxStage';
 import { Gift, RotateCcw, Download, ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useDrawStore } from '../store/useDrawStore';
 import { useDrawSession } from '../context/DrawSessionContext';
+import { usePresentationMode } from '../context/PresentationModeContext';
+import {
+  PresentationStageTopBar,
+  PresentationStageFooter,
+} from './PresentationStageChrome';
 import { exportDrawResultExcel } from '../utils/excel';
 
 export const DrawStage: React.FC = () => {
@@ -25,6 +30,7 @@ export const DrawStage: React.FC = () => {
     highlightId,
     prizeSlotsLeft,
   } = useDrawSession();
+  const { isPresentationMode } = usePresentationMode();
 
   const drawSessionLocked =
     isDrawing || isPreRevealPause || isAwaitingConfirm || isBatchRunning;
@@ -33,6 +39,7 @@ export const DrawStage: React.FC = () => {
 
   const sortedPrizes = [...prizes].sort((a, b) => a.order - b.order);
   const winnerCount = sortedPrizes.reduce((sum, p) => sum + p.winners.length, 0);
+  const currentPrize = prizes.find((p) => p.id === currentPrizeId);
 
   const [winnersPanelOpen, setWinnersPanelOpen] = useState(true);
   const [expandedPrizeIds, setExpandedPrizeIds] = useState<Record<string, boolean>>(() => ({
@@ -56,6 +63,50 @@ export const DrawStage: React.FC = () => {
     }
     exportDrawResultExcel(prizes, participants);
   };
+
+  const drawArea =
+    stageDisplayMode === 'blindbox' ? (
+      <BlindBoxStage
+        pool={pool}
+        highlightId={highlightId}
+        isDrawing={isDrawing}
+        isPreRevealPause={isPreRevealPause}
+        isPopupOpen={isAwaitingConfirm}
+        immersive={isPresentationMode}
+      />
+    ) : (
+      <CandidateMatrix
+        pool={pool}
+        highlightId={highlightId}
+        isDrawing={isDrawing || isPreRevealPause}
+      />
+    );
+
+  if (isPresentationMode) {
+    return (
+      <div className="flex flex-1 min-h-0 flex-col w-full">
+        <PresentationStageTopBar
+          prizeName={currentPrize?.name ?? '尚未選擇獎項'}
+          winnersCount={currentPrize?.winners.length ?? 0}
+          quota={currentPrize?.quota ?? 0}
+          poolSize={pool.length}
+          slotsLeft={prizeSlotsLeft}
+        />
+        <div className="flex-1 min-h-0 flex flex-col relative">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.06),transparent_65%)] pointer-events-none" />
+          <div className="relative flex-1 min-h-0 flex flex-col px-2 sm:px-4">
+            <div className="flex flex-wrap justify-center gap-2 py-2 shrink-0">
+              <span className="text-sm font-medium text-slate-300">
+                {stageDisplayMode === 'blindbox' ? '盲盒抽獎' : '候選人員矩陣'}
+              </span>
+            </div>
+            {drawArea}
+          </div>
+        </div>
+        <PresentationStageFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -224,21 +275,7 @@ export const DrawStage: React.FC = () => {
             </span>
           </div>
 
-          {stageDisplayMode === 'blindbox' ? (
-            <BlindBoxStage
-              pool={pool}
-              highlightId={highlightId}
-              isDrawing={isDrawing}
-              isPreRevealPause={isPreRevealPause}
-              isPopupOpen={isAwaitingConfirm}
-            />
-          ) : (
-            <CandidateMatrix
-              pool={pool}
-              highlightId={highlightId}
-              isDrawing={isDrawing || isPreRevealPause}
-            />
-          )}
+          {drawArea}
         </section>
       </main>
     </div>

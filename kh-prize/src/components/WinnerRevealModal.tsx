@@ -21,7 +21,9 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm"
+      className={`fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/85 backdrop-blur-sm ${
+        isPresentationMode ? 'p-2 sm:p-4' : 'p-4'
+      }`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="winner-reveal-title"
@@ -37,34 +39,73 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
             ? { duration: 0.32, ease: [0.22, 1, 0.36, 1] }
             : { type: 'spring', stiffness: 320, damping: 26 }
         }
-        className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(245,158,11,0.35)] overflow-hidden"
+        className={`w-full rounded-2xl border border-amber-500/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(245,158,11,0.35)] overflow-hidden ${
+          isPresentationMode
+            ? 'max-w-[min(98vw,48rem)] min-h-[min(88dvh,720px)] flex flex-col justify-center'
+            : 'max-w-md'
+        }`}
       >
-        <div className="bg-amber-500/15 border-b border-amber-500/30 px-6 py-4 text-center">
-          <Trophy className="w-10 h-10 text-amber-400 mx-auto mb-2" />
-          <p id="winner-reveal-title" className="text-sm text-amber-300/90 font-medium">
+        <div
+          className={`bg-amber-500/15 border-b border-amber-500/30 text-center ${
+            isPresentationMode ? 'px-8 py-5' : 'px-6 py-4'
+          }`}
+        >
+          <Trophy
+            className={`text-amber-400 mx-auto mb-2 ${isPresentationMode ? 'w-14 h-14' : 'w-10 h-10'}`}
+          />
+          <p
+            id="winner-reveal-title"
+            className={`text-amber-300/90 font-medium ${
+              isPresentationMode ? 'text-xl sm:text-2xl' : 'text-sm'
+            }`}
+          >
             恭喜得獎
           </p>
-          <p className="text-xs text-slate-400 mt-1">{prizeName}</p>
+          <p
+            className={`text-slate-400 mt-1 ${isPresentationMode ? 'text-base sm:text-lg' : 'text-xs'}`}
+          >
+            {prizeName}
+          </p>
         </div>
 
-        <div className="px-6 py-8 text-center">
-          <p className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-3">
+        <div
+          className={`text-center flex-1 flex flex-col justify-center ${
+            isPresentationMode ? 'px-8 py-10 sm:py-14' : 'px-6 py-8'
+          }`}
+        >
+          <p
+            className={`font-bold text-white tracking-tight mb-3 leading-tight ${
+              isPresentationMode
+                ? 'text-5xl sm:text-6xl md:text-7xl lg:text-8xl'
+                : 'text-4xl md:text-5xl'
+            }`}
+          >
             {winner.name}
           </p>
-          <p className="text-base text-slate-400">
+          <p
+            className={`text-slate-400 ${isPresentationMode ? 'text-xl sm:text-2xl md:text-3xl' : 'text-base'}`}
+          >
             {winner.department}
           </p>
-          <p className="text-sm text-slate-500 font-mono mt-1">{winner.id}</p>
+          <p
+            className={`text-slate-500 font-mono mt-2 ${
+              isPresentationMode ? 'text-lg sm:text-xl' : 'text-sm'
+            }`}
+          >
+            {winner.id}
+          </p>
         </div>
 
-        <div className="px-6 pb-6">
+        <div className={isPresentationMode ? 'px-8 pb-8' : 'px-6 pb-6'}>
           <button
             type="button"
             data-presentation-draw
             onClick={onConfirm}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-base transition shadow-lg"
+            className={`w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition shadow-lg ${
+              isPresentationMode ? 'py-4 text-lg sm:text-xl' : 'py-3.5 text-base'
+            }`}
           >
-            <Check className="w-5 h-5" />
+            <Check className={isPresentationMode ? 'w-6 h-6' : 'w-5 h-5'} />
             確認並加入得獎名冊
           </button>
           {isPresentationMode && (

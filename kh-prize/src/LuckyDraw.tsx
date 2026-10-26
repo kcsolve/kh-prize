@@ -63,10 +63,11 @@ const LuckyDrawShell: React.FC = () => {
 
   return (
     <div
-      className={`min-h-screen bg-slate-950 text-slate-100 p-6 md:p-8 flex flex-col ${
-        uiLocked ? 'ring-2 ring-inset ring-emerald-500/25' : ''
+      className={`bg-slate-950 text-slate-100 flex flex-col ${
+        uiLocked ? 'flex-1 min-h-0 h-full p-0' : 'min-h-screen p-6 md:p-8'
       }`}
     >
+      {!uiLocked && (
       <header className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_auto_minmax(0,0.85fr)] gap-4 lg:gap-6 items-center mb-6 pb-4 border-b border-slate-800">
         <div className="flex items-center gap-3 lg:justify-self-stretch min-w-0 w-full">
           <Trophy className="w-8 h-8 text-amber-400 shrink-0" />
@@ -76,7 +77,7 @@ const LuckyDrawShell: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 py-1 relative z-20">
-          {activeTab === 'stage' || uiLocked ? (
+          {activeTab === 'stage' && !uiLocked ? (
             <>
               <ContinuousDrawToggle />
               <DrawStartButton />
@@ -122,19 +123,13 @@ const LuckyDrawShell: React.FC = () => {
           <SafetyModeButton />
         </div>
       </header>
+      )}
 
       <div
         className={`flex-1 flex flex-col min-h-0 relative ${
-          uiLocked ? 'pointer-events-none select-none' : ''
+          uiLocked ? 'min-h-0 overflow-hidden' : ''
         }`}
       >
-        {uiLocked && (
-          <div
-            className="absolute inset-0 z-10 cursor-not-allowed"
-            aria-hidden
-            title="抽獎模式中已鎖定編輯"
-          />
-        )}
         {activeTab === 'stage' && <DrawStage />}
         {!uiLocked && activeTab === 'prizes' && <PrizeManager />}
         {!uiLocked && activeTab === 'participants' && <ParticipantManager />}

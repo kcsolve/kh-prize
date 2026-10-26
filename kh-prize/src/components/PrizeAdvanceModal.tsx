@@ -19,7 +19,7 @@ export const PrizeAdvanceModal: React.FC<PrizeAdvanceModalProps> = ({ notice, on
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="prize-advance-title"

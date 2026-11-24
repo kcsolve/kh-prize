@@ -3,6 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { StateStorage } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
 import { normalizeDrawTheme, type DrawThemeId } from '../themes/drawThemes';
+import {
+  normalizeImportedParticipants,
+  pickValidCurrentPrizeId,
+  reconcileParticipantsWithPrizes,
+} from '../utils/drawReconcile';
 
 export interface Participant {
   id: string;
@@ -113,7 +118,11 @@ export const useDrawStore = create<DrawState>()(
       setDrawTheme: (theme) => set({ drawTheme: normalizeDrawTheme(theme) }),
       toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
 
-      setParticipants: (list) => set({ participants: list }),
+      setParticipants: (list) =>
+        set((state) => ({
+          participants: normalizeImportedParticipants(list),
+          prizes: state.prizes.map((pz) => ({ ...pz, winners: [] })),
+        })),
       toggleParticipantEligibility: (id) =>
         set((state) => ({
           participants: state.participants.map((p) => {
@@ -168,7 +177,19 @@ export const useDrawStore = create<DrawState>()(
 
       clearParticipants: () => set({ participants: [] }),
 
-      setPrizes: (prizes) => set({ prizes }),
+      setPrizes: (prizes) =>
+        set((state) => {
+          const nextPrizes = prizes.map((pz) => ({
+            ...pz,
+            winners: Array.isArray(pz.winners) ? pz.winners : [],
+          }));
+          const reconciled = reconcileParticipantsWithPrizes(state.participants, nextPrizes);
+          return {
+            prizes: reconciled.prizes,
+            participants: reconciled.participants,
+            currentPrizeId: pickValidCurrentPrizeId(reconciled.prizes, state.currentPrizeId),
+          };
+        }),
       addPrize: (prize) => set((state) => ({ prizes: [...state.prizes, prize] })),
       updatePrize: (id, updated) =>
         set((state) => ({
@@ -184,13 +205,26 @@ export const useDrawStore = create<DrawState>()(
       deletePrize: (id) =>
         set((state) => {
           const prizes = state.prizes.filter((pz) => pz.id !== id);
-          let currentPrizeId = state.currentPrizeId;
-          if (currentPrizeId === id) {
-            currentPrizeId = [...prizes].sort((a, b) => a.order - b.order)[0]?.id ?? '';
-          }
-          return { prizes, currentPrizeId };
+          const participants = state.participants.map((p) =>
+            p.wonPrizeId === id
+              ? {
+                  id: p.id,
+                  name: p.name,
+                  department: p.department,
+                  eligible: true,
+                }
+              : p
+          );
+          return {
+            prizes,
+            participants,
+            currentPrizeId: pickValidCurrentPrizeId(prizes, state.currentPrizeId),
+          };
         }),
-      setCurrentPrizeId: (id) => set({ currentPrizeId: id }),
+      setCurrentPrizeId: (id) =>
+        set((state) => ({
+          currentPrizeId: pickValidCurrentPrizeId(state.prizes, id),
+        })),
 
       awardWinner: (prizeId, winner) =>
         set((state) => {
@@ -203,10 +237,16 @@ export const useDrawStore = create<DrawState>()(
           if (!person?.eligible || person.wonPrizeId) return state;
 
           const prizeName = targetPrize.name || '神秘獎品';
+          const winnerSnapshot: Participant = {
+            id: person.id,
+            name: person.name,
+            department: person.department,
+            eligible: false,
+          };
 
           return {
             prizes: state.prizes.map((p) =>
-              p.id === prizeId ? { ...p, winners: [...p.winners, winner] } : p
+              p.id === prizeId ? { ...p, winners: [...p.winners, winnerSnapshot] } : p
             ),
             participants: state.participants.map((p) =>
               p.id === winner.id
@@ -217,11 +257,24 @@ export const useDrawStore = create<DrawState>()(
         }),
 
       resetAll: () =>
-        set({
-          participants: DEFAULT_PARTICIPANTS,
-          prizes: DEFAULT_PRIZES,
-          currentPrizeId: 'prize-1',
-          activeTab: 'stage',
+        set((state) => {
+          const prizes = state.prizes.map((p) => ({ ...p, winners: [] }));
+          const participants = state.participants.map((p) =>
+            p.wonPrizeId
+              ? {
+                  id: p.id,
+                  name: p.name,
+                  department: p.department,
+                  eligible: true,
+                }
+              : p
+          );
+
+          return {
+            prizes,
+            participants,
+            currentPrizeId: pickValidCurrentPrizeId(prizes, state.currentPrizeId),
+          };
         }),
 
       setHasHydrated: (val) => set({ hasHydrated: val }),
@@ -324,7 +377,18 @@ export const useDrawStore = create<DrawState>()(
         };
       },
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (!state) return;
+        const reconciled = reconcileParticipantsWithPrizes(
+          state.participants ?? DEFAULT_PARTICIPANTS,
+          state.prizes ?? DEFAULT_PRIZES
+        );
+        state.participants = reconciled.participants;
+        state.prizes = reconciled.prizes;
+        state.currentPrizeId = pickValidCurrentPrizeId(
+          reconciled.prizes,
+          state.currentPrizeId ?? 'prize-1'
+        );
+        state.setHasHydrated(true);
       },
     }
   )

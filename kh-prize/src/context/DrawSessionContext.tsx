@@ -29,6 +29,10 @@ import {
   PresentationExitConfirmModal,
   usePresentationMode,
 } from './PresentationModeContext';
+import { AccidentalDrawGuardModal } from '../components/AccidentalDrawGuardModal';
+
+/** 兩次觸發抽獎間隔短於此值（ms）視為誤觸 */
+const ACCIDENTAL_DRAW_GUARD_MS = 1000;
 
 export const PRESENTATION_HOST_ATTR = 'data-presentation-host';
 
@@ -54,8 +58,11 @@ interface DrawSessionContextValue {
   highlightId: string | null;
   runDrawAnimation: () => void;
   confirmPendingWinner: () => void;
+  abortDrawSession: () => void;
   isPrizeAdvanceOpen: boolean;
   dismissPrizeAdvance: () => void;
+  isAccidentalDrawLocked: boolean;
+  dismissAccidentalDrawLock: () => void;
 }
 
 const DrawSessionContext = createContext<DrawSessionContextValue | null>(null);
@@ -103,6 +110,8 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isPreRevealPause, setIsPreRevealPause] = useState(false);
   const [prizeAdvanceNotice, setPrizeAdvanceNotice] = useState<PrizeAdvanceNotice | null>(null);
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
+  const [isAccidentalDrawLocked, setIsAccidentalDrawLocked] = useState(false);
+  const lastDrawTriggerAtRef = useRef(0);
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const poolRef = useRef(pool);
@@ -116,6 +125,9 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const batchProgressRef = useRef<BatchProgress | null>(null);
   const batchWinnersRef = useRef<Participant[]>([]);
   const runDrawAnimationRef = useRef<() => void>(() => {});
+  /** 本輪抽獎開始時鎖定的獎項，避免動畫／確認期間錯配 */
+  const drawSessionPrizeIdRef = useRef('');
+  const drawSessionPrizeNameRef = useRef('');
 
   useEffect(() => {
     prizeNameRef.current = currentPrize?.name ?? '';
@@ -127,13 +139,19 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const isAwaitingConfirm = pendingReveal != null || pendingBatchSummary != null;
   const isPrizeAdvanceOpen = prizeAdvanceNotice != null;
+  const dismissAccidentalDrawLock = useCallback(() => {
+    setIsAccidentalDrawLocked(false);
+    lastDrawTriggerAtRef.current = 0;
+  }, []);
+
   const canDraw =
     pool.length > 0 &&
     prizeSlotsLeft > 0 &&
     currentPrize != null &&
     !isAwaitingConfirm &&
     !isPreRevealPause &&
-    !isPrizeAdvanceOpen;
+    !isPrizeAdvanceOpen &&
+    !isAccidentalDrawLocked;
 
   const openAdvanceFromFullPrize = useCallback(
     (prizeId: string) => {
@@ -161,6 +179,36 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const dismissPrizeAdvance = useCallback(() => {
     setPrizeAdvanceNotice(null);
   }, []);
+
+  const clearDrawTimers = useCallback(() => {
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+    }
+    if (preRevealTimeoutRef.current) {
+      clearTimeout(preRevealTimeoutRef.current);
+      preRevealTimeoutRef.current = null;
+    }
+  }, []);
+
+  const abortDrawSession = useCallback(() => {
+    clearDrawTimers();
+    batchActiveRef.current = false;
+    batchRemainingRef.current = 0;
+    batchSlotsAtStartRef.current = 0;
+    batchWinnersRef.current = [];
+    drawSessionPrizeIdRef.current = '';
+    drawSessionPrizeNameRef.current = '';
+    setIsDrawing(false);
+    setHighlightId(null);
+    setPendingReveal(null);
+    setPendingBatchSummary(null);
+    setIsPreRevealPause(false);
+    setPrizeAdvanceNotice(null);
+    setBatchProgress(null);
+    setIsAccidentalDrawLocked(false);
+    lastDrawTriggerAtRef.current = 0;
+  }, [clearDrawTimers]);
 
   const selectRandomParticipant = (candidates: Participant[]): Participant => {
     const array = new Uint32Array(1);
@@ -192,17 +240,25 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     setHighlightId(null);
     setIsPreRevealPause(false);
+    const lockedPrizeId = drawSessionPrizeIdRef.current || currentPrizeIdRef.current;
+    const lockedPrize = useDrawStore.getState().prizes.find((p) => p.id === lockedPrizeId);
     setPendingBatchSummary({
       winners,
-      prizeId: currentPrizeIdRef.current,
-      prizeName: prizeNameRef.current,
+      prizeId: lockedPrizeId,
+      prizeName: lockedPrize?.name ?? drawSessionPrizeNameRef.current ?? prizeNameRef.current,
     });
   }, [finishBatch]);
 
   const finalizeWinner = useCallback(() => {
+    try {
     if (batchActiveRef.current) {
       const snap = useDrawStore.getState();
-      const prizeId = currentPrizeIdRef.current;
+      const prizeId = drawSessionPrizeIdRef.current || currentPrizeIdRef.current;
+      if (!snap.prizes.some((p) => p.id === prizeId)) {
+        finishBatch();
+        setIsDrawing(false);
+        return;
+      }
       const slotsLeftNow = getRemainingPrizeSlots(snap.prizes, prizeId);
       const planned = batchSlotsAtStartRef.current || batchRemainingRef.current;
       const totalToDraw = Math.min(
@@ -251,10 +307,17 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         origin: { y: 0.55 },
       });
 
+      const lockedPrizeId = drawSessionPrizeIdRef.current || currentPrizeIdRef.current;
+      const lockedPrize = useDrawStore.getState().prizes.find((p) => p.id === lockedPrizeId);
+      if (!lockedPrize) {
+        setIsPreRevealPause(false);
+        return;
+      }
+
       setPendingReveal({
         winner: finalWinner,
-        prizeId: currentPrizeIdRef.current,
-        prizeName: prizeNameRef.current,
+        prizeId: lockedPrizeId,
+        prizeName: drawSessionPrizeNameRef.current || lockedPrize.name,
       });
       setIsPreRevealPause(false);
       preRevealTimeoutRef.current = null;
@@ -269,12 +332,27 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setIsPreRevealPause(true);
     if (preRevealTimeoutRef.current) clearTimeout(preRevealTimeoutRef.current);
     preRevealTimeoutRef.current = setTimeout(openWinnerPopup, pauseMs);
+    } finally {
+      if (!batchActiveRef.current) {
+        setIsDrawing(false);
+      }
+    }
   }, [finishBatch, showBatchSummaryPopup]);
 
   const confirmPendingWinner = useCallback(() => {
     if (pendingBatchSummary) {
       const prizeIdAtConfirm = pendingBatchSummary.prizeId;
+      const prizeExists = useDrawStore.getState().prizes.some((p) => p.id === prizeIdAtConfirm);
+      if (!prizeExists) {
+        setPendingBatchSummary(null);
+        finishBatch();
+        return;
+      }
+
+      const seen = new Set<string>();
       for (const winner of pendingBatchSummary.winners) {
+        if (seen.has(winner.id)) continue;
+        seen.add(winner.id);
         const slotsLeft = getRemainingPrizeSlots(
           useDrawStore.getState().prizes,
           prizeIdAtConfirm
@@ -297,6 +375,11 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     if (!pendingReveal) return;
     const prizeIdAtConfirm = pendingReveal.prizeId;
+    if (!useDrawStore.getState().prizes.some((p) => p.id === prizeIdAtConfirm)) {
+      setPendingReveal(null);
+      setHighlightId(null);
+      return;
+    }
     awardWinner(prizeIdAtConfirm, pendingReveal.winner);
     setPendingReveal(null);
     setHighlightId(null);
@@ -327,10 +410,32 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   ]);
 
   const runDrawAnimation = useCallback(() => {
+    const now = Date.now();
+
+    if (isAccidentalDrawLocked) return;
+
+    const sinceLastTrigger = now - lastDrawTriggerAtRef.current;
+    if (
+      lastDrawTriggerAtRef.current > 0 &&
+      sinceLastTrigger < ACCIDENTAL_DRAW_GUARD_MS
+    ) {
+      abortDrawSession();
+      setIsAccidentalDrawLocked(true);
+      lastDrawTriggerAtRef.current = now;
+      return;
+    }
+    lastDrawTriggerAtRef.current = now;
+
     if (!canDraw || isDrawing || isAwaitingConfirm || isPreRevealPause) return;
     if (batchActiveRef.current) return;
 
     const snap = useDrawStore.getState();
+    const lockedPrize = snap.prizes.find((p) => p.id === snap.currentPrizeId);
+    if (!lockedPrize) return;
+
+    drawSessionPrizeIdRef.current = lockedPrize.id;
+    drawSessionPrizeNameRef.current = lockedPrize.name;
+
     const { continuousDrawEnabled } = snap;
     if (continuousDrawEnabled) {
       const slotsLeft = getRemainingPrizeSlots(snap.prizes, snap.currentPrizeId);
@@ -382,16 +487,37 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
 
     requestAnimationFrame(loop);
-  }, [canDraw, isDrawing, isAwaitingConfirm, isPreRevealPause, finalizeWinner]);
+  }, [
+    canDraw,
+    isDrawing,
+    isAwaitingConfirm,
+    isPreRevealPause,
+    isAccidentalDrawLocked,
+    abortDrawSession,
+    finalizeWinner,
+  ]);
+
+  useEffect(() => {
+    if (!isAccidentalDrawLocked) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const isUnlockKey =
+        e.key.toLowerCase() === 'w' || e.code === 'KeyW';
+      if (!isUnlockKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dismissAccidentalDrawLock();
+    };
+
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [isAccidentalDrawLocked, dismissAccidentalDrawLock]);
 
   runDrawAnimationRef.current = runDrawAnimation;
 
-  useEffect(() => {
-    return () => {
-      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-      if (preRevealTimeoutRef.current) clearTimeout(preRevealTimeoutRef.current);
-    };
-  }, []);
+  useEffect(() => clearDrawTimers, [clearDrawTimers]);
 
   useEffect(() => {
     if (!isPresentationMode) return;
@@ -422,8 +548,11 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     highlightId,
     runDrawAnimation,
     confirmPendingWinner,
+    abortDrawSession,
     isPrizeAdvanceOpen,
     dismissPrizeAdvance,
+    isAccidentalDrawLocked,
+    dismissAccidentalDrawLock,
   };
 
   const modals = (
@@ -449,6 +578,7 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         onCancel={cancelExitPresentation}
         onConfirm={exitPresentationMode}
       />
+      <AccidentalDrawGuardModal open={isAccidentalDrawLocked} />
     </>
   );
 
@@ -527,6 +657,7 @@ export const DrawStartButton: React.FC<{ className?: string }> = ({ className = 
     canDraw,
     prizeSlotsLeft,
     runDrawAnimation,
+    isAccidentalDrawLocked,
   } = useDrawSession();
   const stageDisplayMode = useDrawStore((s) => s.stageDisplayMode);
   const { drawDurationMs, preRevealPauseMs } = getDrawTiming(stageDisplayMode);
@@ -534,18 +665,25 @@ export const DrawStartButton: React.FC<{ className?: string }> = ({ className = 
   const pauseSec = preRevealPauseMs / 1000;
   const isBlindbox = stageDisplayMode === 'blindbox';
 
-  const disabled =
-    isDrawing || isPreRevealPause || isAwaitingConfirm || !canDraw || isBatchRunning;
+  const drawBusy =
+    isDrawing ||
+    isPreRevealPause ||
+    isAwaitingConfirm ||
+    !canDraw ||
+    isBatchRunning;
 
   return (
     <button
       type="button"
       data-presentation-draw
       onClick={runDrawAnimation}
-      disabled={disabled}
+      disabled={isAccidentalDrawLocked}
+      aria-disabled={drawBusy || isAccidentalDrawLocked}
       className={`relative px-8 md:px-12 py-3 md:py-3.5 rounded-full font-bold text-base md:text-lg tracking-wider transition-all duration-300 whitespace-nowrap ${className} ${
         isDrawing || isPreRevealPause
           ? 'bg-amber-500 text-slate-950 cursor-not-allowed animate-pulse shadow-[0_0_30px_rgba(245,158,11,0.6)]'
+          : isAccidentalDrawLocked
+            ? 'bg-rose-950/60 text-rose-100 cursor-not-allowed border border-rose-500/40'
           : isAwaitingConfirm
             ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
             : !canDraw
@@ -571,6 +709,8 @@ export const DrawStartButton: React.FC<{ className?: string }> = ({ className = 
             ? isBatchRunning
               ? '請確認一連抽名單'
               : '請確認得獎者'
+            : isAccidentalDrawLocked
+              ? '請按 W（大小寫皆可）解除誤觸鎖定'
             : !canDraw
               ? prizeSlotsLeft <= 0
                 ? '本獎項名額已滿'

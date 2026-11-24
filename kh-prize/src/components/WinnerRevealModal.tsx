@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { fireWinnerRevealConfetti } from '../utils/winnerRevealConfetti';
 import { motion } from 'framer-motion';
 import { Trophy, Check } from 'lucide-react';
 import type { Participant } from '../store/useDrawStore';
 import { usePresentationMode } from '../context/PresentationModeContext';
 import { useDrawStore } from '../store/useDrawStore';
 import { PrizeNameFitText } from './PrizeNameFitText';
+import { winnerModalOverlayClass } from './winnerModalLayer';
 
 interface WinnerRevealModalProps {
   winner: Participant;
@@ -19,12 +21,18 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
 }) => {
   const { isPresentationMode } = usePresentationMode();
   const isBlindbox = useDrawStore((s) => s.stageDisplayMode) === 'blindbox';
+  const confettiFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (confettiFiredRef.current) return;
+    confettiFiredRef.current = true;
+    fireWinnerRevealConfetti(isBlindbox, 'single');
+  }, [isBlindbox]);
 
   return (
     <motion.div
-      className={`fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/85 backdrop-blur-sm ${
-        isPresentationMode ? 'p-2 sm:p-4' : 'p-4'
-      }`}
+      data-winner-modal
+      className={`${winnerModalOverlayClass} ${isPresentationMode ? 'p-2 sm:p-4' : 'p-4'}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="winner-reveal-title"
@@ -40,7 +48,7 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
             ? { duration: 0.32, ease: [0.22, 1, 0.36, 1] }
             : { type: 'spring', stiffness: 320, damping: 26 }
         }
-        className={`w-full rounded-2xl border border-amber-500/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(245,158,11,0.35)] overflow-hidden ${
+        className={`relative z-[1] w-full rounded-2xl border border-amber-500/40 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(245,158,11,0.35)] overflow-hidden ${
           isPresentationMode
             ? 'max-w-[min(98vw,48rem)] min-h-[min(88dvh,720px)] flex flex-col justify-center'
             : 'max-w-md'
@@ -66,7 +74,7 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
             text={prizeName}
             isPresentationMode={isPresentationMode}
             context="popup"
-            maxLines={2}
+            maxLines={1}
             className="mt-2"
             toneClassName="text-amber-200/95 font-bold"
           />

@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useDrawStore } from '../store/useDrawStore';
+import { fireWinnerRevealConfetti } from '../utils/winnerRevealConfetti';
 import { motion } from 'framer-motion';
 import { Check, PartyPopper } from 'lucide-react';
 import type { Participant } from '../store/useDrawStore';
 import { usePresentationMode } from '../context/PresentationModeContext';
 import { getBatchWinnerListLayout } from '../utils/winnerModalTypography';
 import { PrizeNameFitText } from './PrizeNameFitText';
+import { winnerModalOverlayClass } from './winnerModalLayer';
 
 export interface BatchWinnerSummaryPayload {
   winners: Participant[];
@@ -22,13 +25,22 @@ export const BatchWinnerAnnounceModal: React.FC<BatchWinnerAnnounceModalProps> =
   onConfirm,
 }) => {
   const { isPresentationMode } = usePresentationMode();
+  const isBlindbox = useDrawStore((s) => s.stageDisplayMode) === 'blindbox';
   const { winners, prizeName } = payload;
   const count = winners.length;
   const layout = getBatchWinnerListLayout(count, isPresentationMode);
+  const confettiFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (confettiFiredRef.current) return;
+    confettiFiredRef.current = true;
+    fireWinnerRevealConfetti(isBlindbox, 'batch');
+  }, [isBlindbox]);
 
   return (
     <motion.div
-      className="fixed inset-0 z-[120] flex items-stretch sm:items-center justify-center p-1 sm:p-3 bg-slate-950/88 backdrop-blur-sm"
+      data-winner-modal
+      className={`${winnerModalOverlayClass} items-stretch sm:items-center p-1 sm:p-3`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="batch-winner-title"
@@ -40,7 +52,7 @@ export const BatchWinnerAnnounceModal: React.FC<BatchWinnerAnnounceModalProps> =
         initial={{ opacity: 0, scale: 0.92, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-        className={`flex flex-col rounded-2xl border border-emerald-500/45 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(16,185,129,0.25)] overflow-hidden ${
+        className={`relative z-[1] flex flex-col rounded-2xl border border-emerald-500/45 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_0_60px_rgba(16,185,129,0.25)] overflow-hidden ${
           isPresentationMode
             ? 'w-full h-full max-h-[100dvh] sm:h-auto sm:max-h-[96dvh] sm:w-[min(98vw,80rem)]'
             : 'w-[min(96vw,56rem)] max-h-[min(92vh,880px)]'
@@ -76,7 +88,7 @@ export const BatchWinnerAnnounceModal: React.FC<BatchWinnerAnnounceModalProps> =
             text={prizeName}
             isPresentationMode={isPresentationMode}
             context="popup"
-            maxLines={2}
+            maxLines={1}
             className={count > 6 && isPresentationMode ? 'mt-0' : 'mt-0.5'}
             toneClassName="text-emerald-200/95 font-bold"
           />

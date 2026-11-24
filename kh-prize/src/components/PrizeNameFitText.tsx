@@ -117,20 +117,30 @@ export const PrizeNameFitText: React.FC<PrizeNameFitTextProps> = ({
   }, [fit]);
 
   const alignClass = align === 'left' ? 'text-left' : 'text-center';
+  const singleLine = maxLines === 1;
 
   return (
-    <div ref={containerRef} className={`w-full min-w-0 ${className}`}>
+    <div ref={containerRef} className={`w-full min-w-0 overflow-hidden ${className}`}>
       <p
         ref={measureRef}
-        className={`break-words leading-tight ${alignClass} ${toneClassName}`}
-        style={{
-          fontSize: fontSizePx != null ? `${fontSizePx}px` : undefined,
-          lineHeight: 1.2,
-          display: '-webkit-box',
-          WebkitLineClamp: maxLines,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}
+        className={`leading-tight ${alignClass} ${toneClassName} ${
+          singleLine ? 'whitespace-nowrap overflow-hidden text-ellipsis' : 'break-words'
+        }`}
+        style={
+          singleLine
+            ? {
+                fontSize: fontSizePx != null ? `${fontSizePx}px` : undefined,
+                lineHeight: 1.2,
+              }
+            : {
+                fontSize: fontSizePx != null ? `${fontSizePx}px` : undefined,
+                lineHeight: 1.2,
+                display: '-webkit-box',
+                WebkitLineClamp: maxLines,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }
+        }
         title={text}
       >
         {text}

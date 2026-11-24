@@ -6,7 +6,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import confetti from 'canvas-confetti';
 import { Sparkles } from 'lucide-react';
 import { useDrawStore } from '../store/useDrawStore';
 import type { Participant } from '../store/useDrawStore';
@@ -231,13 +230,6 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return;
     }
 
-    const isBlindbox = useDrawStore.getState().stageDisplayMode === 'blindbox';
-    confetti({
-      particleCount: isBlindbox ? 140 : 180,
-      spread: 90,
-      origin: { y: 0.55 },
-    });
-
     setHighlightId(null);
     setIsPreRevealPause(false);
     const lockedPrizeId = drawSessionPrizeIdRef.current || currentPrizeIdRef.current;
@@ -301,12 +293,6 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setHighlightId(finalWinner.id);
 
     const openWinnerPopup = () => {
-      confetti({
-        particleCount: isBlindbox ? 120 : 160,
-        spread: 90,
-        origin: { y: 0.55 },
-      });
-
       const lockedPrizeId = drawSessionPrizeIdRef.current || currentPrizeIdRef.current;
       const lockedPrize = useDrawStore.getState().prizes.find((p) => p.id === lockedPrizeId);
       if (!lockedPrize) {
@@ -582,6 +568,13 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     </>
   );
 
+  const winnerListModalOpen =
+    pendingReveal != null || pendingBatchSummary != null;
+
+  const stageBlurClass = winnerListModalOpen
+    ? 'blur-2xl brightness-[0.42] saturate-[0.85] pointer-events-none select-none'
+    : '';
+
   return (
     <DrawSessionContext.Provider value={value}>
       <div
@@ -593,7 +586,13 @@ export const DrawSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
             : 'contents'
         }
       >
-        {children}
+        {isPresentationMode ? (
+          <div className={`flex flex-1 flex-col min-h-0 min-w-0 overflow-hidden transition-[filter] duration-300 ${stageBlurClass}`}>
+            {children}
+          </div>
+        ) : (
+          <div className={winnerListModalOpen ? stageBlurClass : 'contents'}>{children}</div>
+        )}
         {modals}
       </div>
     </DrawSessionContext.Provider>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Gift } from 'lucide-react';
+import { Check, Gift } from 'lucide-react';
 import { usePresentationMode } from '../context/PresentationModeContext';
 import { PrizeNameFitText } from './PrizeNameFitText';
 
@@ -49,37 +49,22 @@ export const PrizeAdvanceModal: React.FC<PrizeAdvanceModalProps> = ({ notice, on
           >
             本獎項名額已滿
           </p>
-          <PrizeNameFitText
-            text={notice.completedPrizeName}
-            isPresentationMode={isPresentationMode}
-            context="advance"
-            maxLines={2}
-            className="mt-3"
-            toneClassName="text-slate-400 font-semibold"
-          />
         </div>
 
-        <div className={`px-6 text-center space-y-3 ${isPresentationMode ? 'py-8' : 'py-6'}`}>
+        <div className={`px-6 text-center space-y-4 ${isPresentationMode ? 'py-8' : 'py-6'}`}>
           {hasNext ? (
             <>
               <p className={`text-slate-300 ${isPresentationMode ? 'text-base sm:text-lg' : 'text-sm'}`}>
                 將自動切換至下一份獎項
               </p>
-              <div className="flex items-center justify-center gap-2 w-full min-w-0">
-                <ArrowRight
-                  className={`shrink-0 text-amber-400 ${isPresentationMode ? 'w-6 h-6' : 'w-4 h-4'}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <PrizeNameFitText
-                    text={notice.nextPrizeName ?? ''}
-                    isPresentationMode={isPresentationMode}
-                    context="advance"
-                    maxLines={2}
-                    align="left"
-                    toneClassName="text-amber-300 font-bold"
-                  />
-                </div>
-              </div>
+              <PrizeNameFitText
+                text={notice.nextPrizeName ?? ''}
+                isPresentationMode={isPresentationMode}
+                context="advance"
+                maxLines={1}
+                align="center"
+                toneClassName="text-amber-300 font-bold"
+              />
             </>
           ) : (
             <p className="text-sm text-slate-300">所有獎項名額皆已抽完，感謝參與！</p>

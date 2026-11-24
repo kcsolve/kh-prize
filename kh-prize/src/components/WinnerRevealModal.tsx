@@ -4,6 +4,7 @@ import { Trophy, Check } from 'lucide-react';
 import type { Participant } from '../store/useDrawStore';
 import { usePresentationMode } from '../context/PresentationModeContext';
 import { useDrawStore } from '../store/useDrawStore';
+import { PrizeNameFitText } from './PrizeNameFitText';
 
 interface WinnerRevealModalProps {
   winner: Participant;
@@ -61,11 +62,14 @@ export const WinnerRevealModal: React.FC<WinnerRevealModalProps> = ({
           >
             恭喜得獎
           </p>
-          <p
-            className={`text-slate-400 mt-1 ${isPresentationMode ? 'text-base sm:text-lg' : 'text-xs'}`}
-          >
-            {prizeName}
-          </p>
+          <PrizeNameFitText
+            text={prizeName}
+            isPresentationMode={isPresentationMode}
+            context="popup"
+            maxLines={2}
+            className="mt-2"
+            toneClassName="text-amber-200/95 font-bold"
+          />
         </div>
 
         <div

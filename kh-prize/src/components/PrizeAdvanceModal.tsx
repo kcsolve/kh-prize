@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Gift } from 'lucide-react';
 import { usePresentationMode } from '../context/PresentationModeContext';
+import { PrizeNameFitText } from './PrizeNameFitText';
 
 export interface PrizeAdvanceNotice {
   completedPrizeName: string;
@@ -28,23 +29,56 @@ export const PrizeAdvanceModal: React.FC<PrizeAdvanceModalProps> = ({ notice, on
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-        className="w-full max-w-md rounded-2xl border border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 shadow-xl overflow-hidden"
+        className={`w-full rounded-2xl border border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 shadow-xl overflow-hidden ${
+          isPresentationMode ? 'max-w-[min(98vw,44rem)]' : 'max-w-md'
+        }`}
       >
-        <div className="px-6 py-5 text-center border-b border-slate-800">
-          <Gift className="w-9 h-9 text-amber-400 mx-auto mb-2" />
-          <p id="prize-advance-title" className="text-base font-semibold text-slate-100">
+        <div
+          className={`px-6 border-b border-slate-800 text-center ${
+            isPresentationMode ? 'py-6' : 'py-5'
+          }`}
+        >
+          <Gift
+            className={`text-amber-400 mx-auto mb-2 ${isPresentationMode ? 'w-12 h-12' : 'w-9 h-9'}`}
+          />
+          <p
+            id="prize-advance-title"
+            className={`font-semibold text-slate-100 ${
+              isPresentationMode ? 'text-xl sm:text-2xl' : 'text-base'
+            }`}
+          >
             本獎項名額已滿
           </p>
-          <p className="text-sm text-slate-400 mt-2">{notice.completedPrizeName}</p>
+          <PrizeNameFitText
+            text={notice.completedPrizeName}
+            isPresentationMode={isPresentationMode}
+            context="advance"
+            maxLines={2}
+            className="mt-3"
+            toneClassName="text-slate-400 font-semibold"
+          />
         </div>
 
-        <div className="px-6 py-6 text-center space-y-3">
+        <div className={`px-6 text-center space-y-3 ${isPresentationMode ? 'py-8' : 'py-6'}`}>
           {hasNext ? (
             <>
-              <p className="text-sm text-slate-300">將自動切換至下一份獎項</p>
-              <div className="flex items-center justify-center gap-2 text-amber-300 font-semibold">
-                <ArrowRight className="w-4 h-4 shrink-0" />
-                <span className="text-left">{notice.nextPrizeName}</span>
+              <p className={`text-slate-300 ${isPresentationMode ? 'text-base sm:text-lg' : 'text-sm'}`}>
+                將自動切換至下一份獎項
+              </p>
+              <div className="flex items-center justify-center gap-2 w-full min-w-0">
+                <ArrowRight
+                  className={`shrink-0 text-amber-400 ${isPresentationMode ? 'w-6 h-6' : 'w-4 h-4'}`}
+                />
+                <div className="flex-1 min-w-0">
+                  <PrizeNameFitText
+                    text={notice.nextPrizeName ?? ''}
+                    isPresentationMode={isPresentationMode}
+                    context="advance"
+                    maxLines={2}
+                    align="left"
+                    toneClassName="text-amber-300 font-bold"
+                  />
+                </div>
               </div>
             </>
           ) : (

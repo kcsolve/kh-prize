@@ -4,6 +4,7 @@ import { Check, PartyPopper } from 'lucide-react';
 import type { Participant } from '../store/useDrawStore';
 import { usePresentationMode } from '../context/PresentationModeContext';
 import { getBatchWinnerListLayout } from '../utils/winnerModalTypography';
+import { PrizeNameFitText } from './PrizeNameFitText';
 
 export interface BatchWinnerSummaryPayload {
   winners: Participant[];
@@ -71,17 +72,14 @@ export const BatchWinnerAnnounceModal: React.FC<BatchWinnerAnnounceModalProps> =
               共 {count} 位
             </span>
           </div>
-          <p
-            className={`text-slate-400 text-center line-clamp-2 ${
-              isPresentationMode
-                ? count > 6
-                  ? 'text-sm mt-0'
-                  : 'text-base sm:text-lg mt-0.5'
-                : 'text-sm mt-0.5'
-            }`}
-          >
-            {prizeName}
-          </p>
+          <PrizeNameFitText
+            text={prizeName}
+            isPresentationMode={isPresentationMode}
+            context="popup"
+            maxLines={2}
+            className={count > 6 && isPresentationMode ? 'mt-0' : 'mt-0.5'}
+            toneClassName="text-emerald-200/95 font-bold"
+          />
         </div>
 
         <ul

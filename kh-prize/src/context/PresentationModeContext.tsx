@@ -45,11 +45,11 @@ const PresentationRemoteListener: React.FC = () => {
     isDrawing,
     isPreRevealPause,
     isAwaitingConfirm,
-    canDraw,
     runDrawAnimation,
     confirmPendingWinner,
     isPrizeAdvanceOpen,
     dismissPrizeAdvance,
+    isAccidentalDrawLocked,
   } = useDrawSession();
 
   useEffect(() => {
@@ -62,6 +62,8 @@ const PresentationRemoteListener: React.FC = () => {
 
         e.preventDefault();
         e.stopPropagation();
+
+        if (isAccidentalDrawLocked) return;
 
         if (exitConfirmOpen) {
           cancelExitPresentation();
@@ -100,7 +102,7 @@ const PresentationRemoteListener: React.FC = () => {
         return;
       }
 
-      if (isDrawing || isPreRevealPause || !canDraw) return;
+      if (isAccidentalDrawLocked) return;
       runDrawAnimation();
     };
 
@@ -111,7 +113,6 @@ const PresentationRemoteListener: React.FC = () => {
     isDrawing,
     isPreRevealPause,
     isAwaitingConfirm,
-    canDraw,
     runDrawAnimation,
     confirmPendingWinner,
     isPrizeAdvanceOpen,
@@ -121,6 +122,7 @@ const PresentationRemoteListener: React.FC = () => {
     requestExitPresentation,
     cancelExitPresentation,
     exitConfirmOpen,
+    isAccidentalDrawLocked,
   ]);
 
   return null;

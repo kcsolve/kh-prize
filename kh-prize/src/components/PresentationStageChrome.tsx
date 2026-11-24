@@ -6,6 +6,7 @@ import {
   DrawStartButton,
   PRESENTATION_HOST_ATTR,
 } from '../context/DrawSessionContext';
+import { PrizeNameFitText } from './PrizeNameFitText';
 
 function requestPresentationHostFullscreen() {
   const host = document.querySelector(`[${PRESENTATION_HOST_ATTR}]`) as HTMLElement | null;
@@ -32,11 +33,17 @@ export const PresentationStageTopBar: React.FC<PresentationStageChromeProps> = (
 
   return (
     <header className="relative z-[130] shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-8 py-4 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
-      <div className="flex-1 min-w-0 text-center sm:text-left">
-        <p className="text-xs uppercase tracking-widest text-slate-500 mb-1">目前獎項</p>
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-amber-300 leading-snug line-clamp-2">
-          {prizeName}
-        </h2>
+      <div className="flex-1 min-w-0 w-full text-center sm:text-left pr-0 sm:pr-4">
+        <p className="text-xs sm:text-sm uppercase tracking-widest text-slate-500 mb-1">目前獎項</p>
+        <PrizeNameFitText
+          text={prizeName}
+          isPresentationMode
+          context="stageHeader"
+          maxLines={2}
+          align="center"
+          className="sm:[&_p]:text-left max-w-full"
+          toneClassName="text-amber-300 font-bold"
+        />
         <p className="text-sm text-slate-400 mt-1">
           已抽出 {winnersCount}/{quota} · 候選 {poolSize} 人 · 剩餘名額 {Math.max(slotsLeft, 0)}
         </p>

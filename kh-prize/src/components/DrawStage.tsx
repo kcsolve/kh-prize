@@ -29,6 +29,7 @@ export const DrawStage: React.FC = () => {
     isBatchRunning,
     highlightId,
     prizeSlotsLeft,
+    abortDrawSession,
   } = useDrawSession();
   const { isPresentationMode } = usePresentationMode();
 
@@ -140,14 +141,19 @@ export const DrawStage: React.FC = () => {
 
         <button
           onClick={() => {
-            if (confirm('確定要清空得獎紀錄並還原預設狀態？此操作不可逆。')) {
+            if (
+              confirm(
+                '確定要清空所有得獎紀錄？\n\n獎品設定與已匯入的名單將保留；得獎者會回到候選池（手動排除資格者不變）。此操作不可逆。'
+              )
+            ) {
+              abortDrawSession();
               resetAll();
             }
           }}
           disabled={drawSessionLocked}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 rounded-md text-xs disabled:opacity-50"
         >
-          <RotateCcw className="w-3.5 h-3.5" /> 重設所有狀態
+          <RotateCcw className="w-3.5 h-3.5" /> 重設抽獎結果
         </button>
         </div>
       </div>

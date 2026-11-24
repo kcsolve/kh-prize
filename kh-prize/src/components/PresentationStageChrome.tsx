@@ -32,14 +32,14 @@ export const PresentationStageTopBar: React.FC<PresentationStageChromeProps> = (
     usePresentationMode();
 
   return (
-    <header className="relative z-[130] shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-8 py-4 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+    <header className="relative z-10 shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-8 py-4 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
       <div className="flex-1 min-w-0 w-full text-center sm:text-left pr-0 sm:pr-4">
         <p className="text-xs sm:text-sm uppercase tracking-widest text-slate-500 mb-1">目前獎項</p>
         <PrizeNameFitText
           text={prizeName}
           isPresentationMode
           context="stageHeader"
-          maxLines={2}
+          maxLines={1}
           align="center"
           className="sm:[&_p]:text-left max-w-full"
           toneClassName="text-amber-300 font-bold"
